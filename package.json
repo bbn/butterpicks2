@@ -1,0 +1,11 @@
+{
+  "name": "sportsbutter-picks",
+  "version": "0.0.1",
+  "dependencies": {
+    "cradle": "0.5.7",
+    "journey": "latest",
+    "backbone": "latest",
+    "underscore": "latest",
+    "vows": "latest"
+  }
+}
