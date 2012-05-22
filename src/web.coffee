@@ -1,4 +1,4 @@
-console.log "STARTING UP PICKS"
+console.log "STARTING UP PICKS!"
 
 controllers = require "./controllers"
     
