@@ -6,6 +6,7 @@
     "npm":  "1.x.x"
   },
   "dependencies": {
+    "node-static": "latest",
     "cradle": "0.5.7",
     "journey": "latest",
     "backbone": "latest",
