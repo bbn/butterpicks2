@@ -1,6 +1,10 @@
 {
   "name": "sportsbutter-picks",
   "version": "0.0.1",
+   "engines": {
+    "node": "0.6.x",
+    "npm":  "1.0.x"
+  },
   "dependencies": {
     "cradle": "0.5.7",
     "journey": "latest",
