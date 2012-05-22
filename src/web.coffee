@@ -1,4 +1,8 @@
-console.log "STARTING UP PICKS!"
+console.log "butterpicks2"
+console.log "ben nevile and ginger ngo"
+console.log "sportsbutter"
+console.log "mainsocial"
+console.log "spring 2012"
 
 controllers = require "./controllers"
     
