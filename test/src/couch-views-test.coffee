@@ -14,8 +14,8 @@ batch = couchViewsTest.addBatch
     "does not return an error": (err,data) ->
       assert.isNull err
 
-    "returns the expected documents": (err,data) ->
-      assert.
+    # "returns the expected documents": (err,data) ->
+    #   assert.
 
 
 batch.run()
