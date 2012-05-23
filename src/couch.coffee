@@ -1,62 +1,72 @@
-cradle = require "cradle"
-_ = require "underscore"
-
 couch = exports
+couch.url = process.env.CLOUDANT_URL or "http://localhost:5984"
 
-database_name = "picks"
+nano = require("nano")(couch.url)
 
-if process.env.CLOUDANT_URL
-  [stuff, cloudant_url] = process.env.CLOUDANT_URL.split '@'
-  [protocol, stuff] = stuff.split '://'
-  [username, password] = stuff.split ':'
-  if protocol is 'https'
-    port = 443
-  else
-    port = 5984
-  options =
-    cache: no
-    raw: no
-    auth:
-      username: username
-      password: password
-  connection = new(cradle.Connection) "#{protocol}://#{cloudant_url}", port, options
-  couch.db = connection.database(database_name)
+if process.env.CLOUDANT_DB
+  couch.dbname = process.env.CLOUDANT_DB
+else if process.env.testing
+  couch.dbname = 'picks-testing'
 else
-  cloudant_url = "127.0.0.1"
-  port = 5984
-  protocol = 'http'
-  connection = new(cradle.Connection)(cloudant_url, port)
-  couch.db = connection.database(database_name)
+  couch.dbname = 'picks'
   
-console.log "checking for database #{database_name} on #{protocol}://#{cloudant_url}:#{port}"
-couch.db.exists (err,exists) ->
-  if err
-    console.log "error", err
-  else if exists
-    #console.log "database exists!"
-  else
-    console.log "database does not exist. creating..."
-    couch.db.create ->
-      console.log "database created!"
-      
-      
+couch.db = nano.use couch.dbname
+console.log "using '%s' database",couch.dbname
+
+#
+# design documents
+#
+
+couch.designDocs = 
+  facebookDocs:
+    views:
+      allByFacebookId:
+        map: "function (doc) { if (doc.facebookId) emit(doc.facebookId); }"
+
+couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
+
+couch.identifyUnmatchedDesignDocs = (callback) ->
+  error = false
+  unmatched = []
+  count = 0
+  
+  processDesignDoc = (name,design) ->
+    url = "_design/"+name
+    couch.db.get url, (err,body,headers) ->
+      mismatch = false
+      if err and err.error == 'not_found' and err.message == 'missing'
+        mismatch = true
+      else if err
+        error = true
+        callback err
+      else
+        for viewName,functions of design.views
+          for f,s of functions
+            if s != body.views[viewName][f]
+              mismatch = true
+      if mismatch
+        details = 
+          name: name
+          design: design
+          old: body
+        unmatched.push details
+      count += 1
+      if count == couch.numberOfDesignDocs and !error
+        callback null,unmatched
+  
+  processDesignDoc name,design for name,design of couch.designDocs
+  
+
 couch.updateDesignDocument = (path, document, callback) ->
   url = "_design/"+path
-  couch.db.get url, (err,doc) ->
+  couch.db.get url, (err,body,headers) ->
     if err
-      if err.error != "not_found" or err.reason != "missing"
-        return callback err,doc
-    if doc
-      document._rev = doc._rev
-      document._id = doc._id
-    couch.db.save url, document, (err,doc) ->
-      return callback err,doc
+      if err.error != "not_found" or err.message != "missing"
+        return callback err,body,headers
+    if body
+      document._rev = body._rev
+      document._id = body._id
+    couch.db.insert document, url, (err,body,headers) ->
+      callback err,body,headers
 
-gaedocsViews = 
-  allByKey:
-    map: (doc) ->
-      if doc.gaekey
-        emit doc.gaekey        
-couch.updateDesignDocument "gaedocs", gaedocsViews, (err,doc) ->
-  console.log "TODO should NOT update design document every time! couchapp.org!!"
   

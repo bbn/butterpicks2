@@ -6,11 +6,11 @@
     "npm":  "1.x.x"
   },
   "dependencies": {
+    "nodeunit" : "latest",
     "node-static": "latest",
-    "cradle": "0.5.7",
+    "nano": "latest",
     "journey": "latest",
     "backbone": "latest",
-    "underscore": "latest",
-    "vows": "latest"
+    "underscore": "latest"
   }
 }
