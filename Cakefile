@@ -69,124 +69,38 @@ option '-t', '--testing', 'use testing couchdb'
 option '-u', '--update', 'update design documents (careful!)'
 
 task 'couchdesign', 'check the design of the couchdb document', (options) ->
-  if options.testing
-    process.env.testing = true
-  else if options.production
-    process.env.CLOUDANT_URL = "https://app1777531.heroku:885tk871iqj5ooraJQC4L5gS@app1777531.heroku.cloudant.com"
+  process.env.testing = true if options.testing
+  process.env.CLOUDANT_URL = "nonsense" if options.production #https://app1777531.heroku:885tk871iqj5ooraJQC4L5gS@app1777531.heroku.cloudant.com"
   couch = require "./lib/couch" 
   couch.identifyUnmatchedDesignDocs (err,unmatched) ->
-    if err
-      print util.inspect err
+    return print(util.inspect(err)) if err
+    if unmatched.length == 0
+      print "no unmatched design documents.\n"
     else
-      if unmatched.length == 0
-        print "no unmatched design documents.\n"
-      else
-        print "\nunmatched design documents:\n\n"
-        for nonmatch in unmatched
-          print nonmatch.name,"\n"
-          print " new: ",util.inspect(nonmatch.design),"\n"
-          print " old: "
-          if nonmatch.old.error == 'not_found'
-            print "MISSING"
-          else
-            print util.inspect(nonmatch.old)
-          print "\n\n"
-        if !options.update
-          print "use --update flag to update these.\n\n"
+      print "\nunmatched design documents:\n\n"
+      for nonmatch in unmatched
+        print nonmatch.name,"\n"
+        print " new: ",util.inspect(nonmatch.design),"\n"
+        print " old: "
+        if nonmatch.old 
+          print util.inspect(nonmatch.old)
         else
-          print "updating...\n"
-          for nonmatch in unmatched
-            couch.updateDesignDocument nonmatch.name, nonmatch.design, (err,body,headers) ->
-              if err
-                print "ERROR:\n"
-                print util.inspect(err),"\n\n"
-              else
-                print "SUCCESS:\n"
-                print util.inspect(body),"\n\n"
-          
+          print "MISSING"
+        print "\n\n"
+      if !options.update
+        print "use --update flag to update these.\n\n"
+      else
+        print "updating...\n"
+        for nonmatch in unmatched
+          couch.updateDesignDocument nonmatch.name, nonmatch.design, (err,body,headers) ->
+            if err
+              print "ERROR:\n"
+              print util.inspect(err),"\n\n"
+            else
+              print "SUCCESS:\n"
+              print util.inspect(body),"\n\n"
+        
   
 
   
-
-task 'kueadmin', 'launch kue admin server', (options) ->
-  redis = require "redis"
-  kue = require "kue"
-  process.env.REDISTOGO_URL = "redis://redistogo:101ef0f223aa403f910a42d041139608@barracuda.redistogo.com:9318/"
-  url = require("url").parse(process.env.REDISTOGO_URL)
-  kue.redis.createClient = ->
-    client = redis.createClient url.port, url.hostname
-    client.auth url.auth.split(':')[1]
-    client
-  kue.app.listen(3000)
-  console.log('listening on port 3000')
-  
-  
-task 'redisinfo', 'show redis info', (options) ->
-  redis = require "redis"
-  url = require("url").parse("redis://redistogo:101ef0f223aa403f910a42d041139608@barracuda.redistogo.com:9318/")
-  client = redis.createClient url.port, url.hostname
-  client.auth url.auth.split(':')[1]
-  client.on "ready", ->
-    print require("util").inspect(client.server_info)
-      
-  
-task 'redisflush', 'flush redis db', (options) ->
-  redis = require "redis"
-  url = require("url").parse("redis://redistogo:101ef0f223aa403f910a42d041139608@barracuda.redistogo.com:9318/")
-  client = redis.createClient url.port, url.hostname
-  client.auth url.auth.split(':')[1]
-  client.on "ready", ->
-    client.flushdb()
-
-task 'rediskeys', 'show redis db keys', (options) ->
-  redis = require "redis"
-  util = require "util"
-  url = require("url").parse("redis://redistogo:101ef0f223aa403f910a42d041139608@barracuda.redistogo.com:9318/")
-  client = redis.createClient url.port, url.hostname
-  client.auth url.auth.split(':')[1]
-  client.on "ready", ->
-    client.keys "*",(err,res) ->
-      print err
-      print util.inspect(res)
-  
-
-task 'qlist','list queues on ironmq',(options) ->
-  process.env.IRON_MQ_TOKEN = '0uCkfFWlFX3LgucfEK8M6_LBJSM'
-  process.env.IRON_MQ_PROJECT_ID ='4f315ebe5023e80f05000031'
-  mq = require "ironmq"
-  mq = mq process.env.IRON_MQ_TOKEN
-  mq.list (err, obj) ->
-    console.log "obj: #{JSON.stringify obj}"
-    
-task 'qput','put something to queue on ironmq',(options) ->
-  process.env.IRON_MQ_TOKEN = '0uCkfFWlFX3LgucfEK8M6_LBJSM'
-  process.env.IRON_MQ_PROJECT_ID ='4f315ebe5023e80f05000031'
-  mq = require "ironmq"
-  mq = mq process.env.IRON_MQ_TOKEN
-  mq = mq.projects process.env.IRON_MQ_PROJECT_ID
-  mq = mq.queues 'test'
-  mq.put 'hello world', (err,obj) ->
-    console.log "obj: #{JSON.stringify obj}"
-    
-task 'qget','get something from ironmq queue',(options) ->
-  process.env.IRON_MQ_TOKEN = '0uCkfFWlFX3LgucfEK8M6_LBJSM'
-  process.env.IRON_MQ_PROJECT_ID ='4f315ebe5023e80f05000031'
-  mq = require "ironmq"
-  mq = mq process.env.IRON_MQ_TOKEN
-  mq = mq.projects process.env.IRON_MQ_PROJECT_ID
-  mq = mq.queues 'test'
-  mq.get (err,obj) ->
-    console.log "obj: #{JSON.stringify obj}"
-    
-# obj: [{"id":"4f31639652549a04ab001c64","timeout":60,"body":"hello world"}]
-
-task 'qdel','delete something from ironmq queue',(options) ->
-  process.env.IRON_MQ_TOKEN = '0uCkfFWlFX3LgucfEK8M6_LBJSM'
-  process.env.IRON_MQ_PROJECT_ID ='4f315ebe5023e80f05000031'
-  mq = require "ironmq"
-  mq = mq process.env.IRON_MQ_TOKEN
-  mq = mq.projects process.env.IRON_MQ_PROJECT_ID
-  mq = mq.queues 'test'
-  mq.del "4f31639652549a04ab001c64", (err,obj) ->
-    console.log "obj: #{JSON.stringify obj}"
 

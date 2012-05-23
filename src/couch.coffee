@@ -34,7 +34,7 @@ couch.identifyUnmatchedDesignDocs = (callback) ->
     url = "_design/"+name
     couch.db.get url, (err,body,headers) ->
       mismatch = false
-      if err and err.error == 'not_found' and err.message == 'missing'
+      if err and err.error == 'not_found' and err.reason == 'missing'
         mismatch = true
       else if err
         error = true
@@ -61,7 +61,7 @@ couch.updateDesignDocument = (path, document, callback) ->
   url = "_design/"+path
   couch.db.get url, (err,body,headers) ->
     if err
-      if err.error != "not_found" or err.message != "missing"
+      if err.error != "not_found" or err.reason != "missing"
         return callback err,body,headers
     if body
       document._rev = body._rev
