@@ -1,5 +1,4 @@
 models = exports
-
 #models.Game = require "./models/game"
 #models.League = require "./models/league"
 #models.Period = require "./models/period"

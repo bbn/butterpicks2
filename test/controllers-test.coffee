@@ -1,3 +1,4 @@
+util = require "util"
 journey = require "journey"
 controllers = require "../lib/controllers"
 mockRequest = require "../node_modules/journey/lib/journey/mock-request"
@@ -14,10 +15,11 @@ exports.testRootGet = (test) ->
     test.done()
 
 
-# /user
+# /facebook-object
 
-exports.testUserGetNoFacebookId = (test) ->
-  x = mock.get '/user', { accept: "application/json" }
+exports.testGetFacebookObject = (test) ->
+  x = mock.get '/facebook-object', { accept: "application/json" }
+  x.on 'error', (response) -> console.log "response: #{util.inspect response}"
   x.on 'success', (response) ->
     test.ok response
     test.equal response.body.error,"no facebookId param"

@@ -10,13 +10,13 @@ controllers.router.map ->
   @root.bind (req,res) ->
     res.send "butterpicks2"
 
-  @get("/user").bind (req,res,params) ->
+  @get("/facebook-object").bind (req,res,params) ->
     return res.send 403,{},{error:"no facebookId param"} unless params.facebookId 
     couch.db.view "facebookDocs","allByFacebookId", { key:params.facebookId }, (err,body,headers) ->
       return res.send 500,{},err if err
       res.send body
 
-  @post("/user").bind (req,res,params) ->
+  @post("/facebook-object").bind (req,res,params) ->
     return res.send 403,{},{error:"no facebookId param"} unless params.facebookId
     return res.send 403,{},{error:"no email param"} unless params.email
     couch.db.insert params, (err,body,headers) ->

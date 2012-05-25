@@ -344,16 +344,17 @@ exports.extname = function(path) {
 
 });
 
-require.define("/models/user.coffee", function (require, module, exports, __dirname, __filename) {
+require.define("/models/user.js", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Backbone, User;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+  var Backbone, User,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   Backbone = require("backbone");
 
-  module.exports = User = (function() {
+  module.exports = User = (function(_super) {
 
-    __extends(User, Backbone.Model);
+    __extends(User, _super);
 
     function User() {
       User.__super__.constructor.apply(this, arguments);
@@ -372,7 +373,7 @@ require.define("/models/user.coffee", function (require, module, exports, __dirn
 
     return User;
 
-  })();
+  })(Backbone.Model);
 
 }).call(this);
 
@@ -2884,7 +2885,7 @@ require.define("/node_modules/underscore/underscore.js", function (require, modu
 
 });
 
-require.define("/models.coffee", function (require, module, exports, __dirname, __filename) {
+require.define("/models.js", function (require, module, exports, __dirname, __filename) {
     (function() {
   var models;
 
@@ -2895,4 +2896,4 @@ require.define("/models.coffee", function (require, module, exports, __dirname, 
 }).call(this);
 
 });
-require("/models.coffee");
+require("/models.js");

@@ -3,6 +3,7 @@ Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 
+
 modelDefaults =
   a: 1
   b: 2
@@ -47,6 +48,7 @@ exports.createModel =
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) -> callback()
 
+
 exports.readModel = 
 
   setUp: (callback) ->
@@ -76,8 +78,6 @@ exports.readModel =
     exports.readModel.model.destroy
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) -> callback()
-
-
 
 
 exports.updateModel = 
@@ -145,11 +145,6 @@ exports.destroyModel =
 
 exports.testMultipleRevisionDestroy = 
 
-  ###
-  TODO
-  - test if deleting a later revision of a document means the document id can no longer be fetched. 
-    eg. if I delete rev 3 for doc id "xyz", is rev 2 for xyz still accessible? 
-  ###
   setUp: (callback) ->
     x = new TestModel()
     x.save x.toJSON(),

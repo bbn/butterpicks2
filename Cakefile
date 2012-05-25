@@ -19,7 +19,7 @@ compile = (lib,src,callback) ->
     callback?(lib,src) if code is 0
 
 browserify = (callback) ->
-  x = spawn 'browserify', ['src/models/models.coffee','-o','static/js/models.js']
+  x = spawn 'browserify', ['lib/models/models.js','-o','static/js/models.js']
   x.stderr.on 'data', (data) ->
     process.stderr.write data.toString()
   x.stdout.on 'data', (data) ->

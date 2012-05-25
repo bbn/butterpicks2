@@ -1,11 +1,12 @@
-console.log "--- butterpicks2              ---"
-console.log "--- ben nevile and ginger ngo ---"
-console.log "--- sportsbutter              ---"
-console.log "--- mainsocial                ---"
-console.log "--- spring 2012               ---"
+console.log "--- butterpicks2 starting up."
 
 static = require "node-static"
 staticFiles = new (static.Server)('./static')
+
+Backbone = require "backbone"
+bbCouch = require "./backbone-couch"
+Backbone.sync = bbCouch.sync
+models = require "./models"
 
 controllers = require "./controllers"
     
