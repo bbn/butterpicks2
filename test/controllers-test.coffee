@@ -5,13 +5,25 @@ mock = mockRequest.mock controllers.router
 journey.env = "test"
 
 
-exports.testRoot = (test) ->
+exports.testRootGet = (test) ->
   x = mock.get '/', { accept: "application/json" }
   x.on 'success', (response) ->
     test.ok response
     test.equal response.body.journey,"butterpicks2"
     test.equal response.status, 200 
     test.done()
+
+
+# /user
+
+exports.testUserGetNoFacebookId = (test) ->
+  x = mock.get '/user', { accept: "application/json" }
+  x.on 'success', (response) ->
+    test.ok response
+    test.equal response.body.error,"no facebookId param"
+    test.equal response.status, 403 
+    test.done()
+
 
 
 #       

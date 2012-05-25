@@ -52,13 +52,14 @@ task 'build', 'Build lib/ from src/', (options) ->
     
 task 'test', 'Run all tests', ->
   process.env.testing = true
+  process.env.testingDbName = 'picks-testing'
   tests = spawn "./node_modules/nodeunit/bin/nodeunit", ['test']
   tests.stderr.on 'data', (data) ->
     process.stderr.write data.toString()
   tests.stdout.on 'data', (data) ->
     print data
   tests.on 'exit', (code) ->
-    print "Tests finished.\n"    
+    print "\n+++ Tests finished.\n\n"    
   
 
 

@@ -18,6 +18,7 @@ controllers.router.map ->
 
   @post("/user").bind (req,res,params) ->
     return res.send 403,{},{error:"no facebookId param"} unless params.facebookId
+    return res.send 403,{},{error:"no email param"} unless params.email
     couch.db.insert params, (err,body,headers) ->
       return res.send 500,{},err if err
       res.send body
