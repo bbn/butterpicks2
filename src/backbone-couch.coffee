@@ -19,8 +19,8 @@ exports.sync = (method,model,options) ->
   switch method
         
     when "read" 
-      error(new Error("no _id")) unless model._id
-      db.get model._id, (err,body,header) ->
+      error(new Error("no id")) unless model.id
+      db.get model.id, (err,body,header) ->
         return error(err) if err 
         return success(body)
 

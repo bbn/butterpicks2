@@ -53,6 +53,7 @@ exports.saveNewModel =
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) -> callback()
 
+
 exports.updateModel = 
 
   setUp: (callback) ->
@@ -92,3 +93,27 @@ exports.updateModel =
     exports.updateModel.model.destroy
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) -> callback()
+
+
+exports.destroyModel = 
+
+  setUp: (callback) ->
+    x = new TestModel()
+    x.save x.toJSON(),
+      error: (model,response) -> console.log "error saving x in updateModel"
+      success: (model,response) ->
+        exports.destroyModel.model = x
+        callback()
+
+  testDestroyModel: (test) ->
+    exports.destroyModel.model.destroy
+      error: (model,response) -> console.log "response: #{util.inspect response}"
+      success: (model,response) -> 
+        model.fetch 
+          error: (model,response) -> 
+            test.equal response.status_code, 404, "expect 404"
+            test.equal response.error, 'not_found', "expect not_found"
+            test.done()
+          success: (model,response) ->
+            console.log "success??"
+            console.log "response: #{util.inspect response}"
