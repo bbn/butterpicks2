@@ -28,16 +28,16 @@ exports.testURL = (test) ->
   test.done()
 
 
-exports.saveNewModel = 
+exports.createModel = 
 
-  testSaveNewModel: (test) ->
+  testCreateModel: (test) ->
     x = new TestModel()
     test.ok x, "new TestModel ok"
     test.equal x.get("a"), modelDefaults.a, "a attribute equal"
     test.equal x.get("b"), modelDefaults.b, "b attribute equal"
     test.equal x.get("c"), modelDefaults.c, "c attribute equal"
     x.save x.toJSON(), 
-      error: (model,response) -> console.log "error saving x in testSaveNewModel"
+      error: (model,response) -> console.log "error saving x in testCreateModel"
       success: (model,response) ->
         test.ok model, "model returned from success ok"
         test.ok model.id, "model.id ok"
@@ -45,13 +45,45 @@ exports.saveNewModel =
         test.equal model.get("a"), modelDefaults.a, "a attribute equal"
         test.equal model.get("b"), modelDefaults.b, "b attribute equal"
         test.equal model.get("c"), modelDefaults.c, "c attribute equal"
-        exports.saveNewModel.teardownModel = model
+        exports.createModel.teardownModel = model
         test.done()
 
   tearDown: (callback) ->
-    exports.saveNewModel.teardownModel.destroy
+    exports.createModel.teardownModel.destroy
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) -> callback()
+
+exports.readModel = 
+
+  setUp: (callback) ->
+    x = new TestModel()
+    x.save x.toJSON(),
+      error: (model,response) -> console.log "error saving x in updateModel"
+      success: (model,response) ->
+        exports.readModel.id = x.id
+        exports.readModel.model = x
+        callback()
+
+  testReadModel: (test) ->
+    id = exports.readModel.id
+    x = new TestModel({ id: id })
+    x.fetch
+      error: (model,response) -> console.log "error fetching x in readModel"
+      success: (model,response) ->
+        test.ok model, "model ok"
+        test.ok model.id, "model.id ok"
+        test.ok model.get("_rev"), "model._rev ok"
+        test.equal model.get("a"), modelDefaults.a, "a attribute equal"
+        test.equal model.get("b"), modelDefaults.b, "b attribute equal"
+        test.equal model.get("c"), modelDefaults.c, "c attribute equal"
+        test.done()
+
+  tearDown: (callback) ->
+    exports.readModel.model.destroy
+      error: (model,response) -> console.log "response: #{util.inspect response}"
+      success: (model,response) -> callback()
+
+
 
 
 exports.updateModel = 
