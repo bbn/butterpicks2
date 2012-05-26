@@ -12,7 +12,7 @@ controllers.router.map ->
 
   @get("/facebook-object").bind (req,res,params) ->
     return res.send 403,{},{error:"no facebookId param"} unless params.facebookId 
-    couch.db.view "facebookDocs","allByFacebookId", { key:params.facebookId }, (err,body,headers) ->
+    couch.db.view "facebookObjects","allByFacebookId", { key:params.facebookId }, (err,body,headers) ->
       return res.send 500,{},err if err
       res.send body
 

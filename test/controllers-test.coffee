@@ -5,6 +5,13 @@ mockRequest = require "../node_modules/journey/lib/journey/mock-request"
 mock = mockRequest.mock controllers.router
 journey.env = "test"
 
+Backbone = require "backbone"
+bbCouch = require "../lib/backbone-couch"
+Backbone.sync = bbCouch.sync
+models = require "../lib/models"
+
+User = models.User
+
 
 exports.testRootGet = (test) ->
   x = mock.get '/', { accept: "application/json" }
@@ -15,9 +22,7 @@ exports.testRootGet = (test) ->
     test.done()
 
 
-# /facebook-object
-
-exports.testGetFacebookObject = (test) ->
+exports.testGetFacebookObjectMissingFacebookId = (test) ->
   x = mock.get '/facebook-object', { accept: "application/json" }
   x.on 'error', (response) -> console.log "response: #{util.inspect response}"
   x.on 'success', (response) ->
@@ -27,46 +32,34 @@ exports.testGetFacebookObject = (test) ->
     test.done()
 
 
+exports.testGetFacebookObjectUser = 
 
-#       
-#   "/from-gae/couchmodel-put POST doc without gaekey":
-#     topic: ->
-#       post '/from-gae/couchmodel-put', {accept: "application/json" }, JSON.stringify resources.docWithoutKey
-# 
-#     "status is 403": (response) ->
-#       assert.equal response.status, 403
-#       
-#     "error is 'no gaekey'": (response) ->
-#       assert.isDefined response.body.error
-#       assert.equal response.body.error, 'no gaekey'
-# 
-#   "/from-gae/couchmodel-put POST doc without doctype":
-#     topic: ->
-#       post '/from-gae/couchmodel-put', {accept: "application/json" }, JSON.stringify resources.docWithoutDoctype
-# 
-#     "status is 403": (response) ->
-#       assert.equal response.status, 403
-# 
-#     "error is 'no key'": (response) ->
-#       assert.isDefined response.body.error
-#       assert.equal response.body.error, 'no doctype'
-# 
-# 
-#       
-#   "/from-gae/couchmodel-put POST user doc":
-#     topic: ->
-#       post '/from-gae/couchmodel-put', {accept: "application/json" }, JSON.stringify resources.user
-#       
-#     "status is 202 (Accepted)": (response) ->
-#       assert.equal response.status, 202
-#       
-#     "responds with data properly": (response) ->
-#       for key, val of resources.user
-#         assert.equal response.body.key, resources.user.key
-# 
-#       
-#         
-#     
-#     
-# 
-# batch.run()# 
+  setUp: (callback) ->
+    u = new User
+      facebookId: 123456789
+    u.save u.toJSON(),
+      error: (model,response) -> console.log "response: #{util.inspect response}"
+      success: (model,response) =>
+        @user = model
+        callback()
+
+  testGetFacebookObjectUser: (test) ->
+    u = @user
+    test.ok u, "cached model is ok"
+    facebookId = u.get "facebookId"
+    test.ok facebookId, "cached model's faceboookId is ok"
+    url = "/facebook-object?facebookId=#{facebookId}"
+    x = mock.get url, { accept: "application/json" }
+    x.on 'success', (response) ->
+      test.ok response, "response is ok"
+      test.equal response.body.error,null,"error should be null"
+      test.equal response.status, 200, "status should be 200"
+      test.done()
+
+  tearDown: (callback) -> 
+    return callback() unless @user
+    u = @user
+    u.destroy
+      error: (model,response) -> console.log "response: #{util.inspect response}"
+      success: -> callback()
+

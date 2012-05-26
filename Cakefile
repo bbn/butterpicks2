@@ -4,6 +4,13 @@ util = require 'util'
 {print} = require 'util'
 {spawn} = require 'child_process'
 
+PRODUCTION_CLOUDANT_URL = "nonsense"
+###
+TODO replace "nonsense" with new cloudant URL instance
+eg: the pools cloudant URL was
+https://app1777531.heroku:885tk871iqj5ooraJQC4L5gS@app1777531.heroku.cloudant.com"
+###
+
 sources = 
   "lib":"src"
   "lib/models":"src/models"
@@ -70,8 +77,10 @@ option '-t', '--testing', 'use testing couchdb'
 option '-u', '--update', 'update design documents (careful!)'
 
 task 'couchdesign', 'check the design of the couchdb document', (options) ->
-  process.env.testing = true if options.testing
-  process.env.CLOUDANT_URL = "nonsense" if options.production #https://app1777531.heroku:885tk871iqj5ooraJQC4L5gS@app1777531.heroku.cloudant.com"
+  if options.testing
+    process.env.testing = true
+    process.env.testingDbName = 'picks-testing'
+  process.env.CLOUDANT_URL = PRODUCTION_CLOUDANT_URL if options.production 
   couch = require "./lib/couch" 
   couch.identifyUnmatchedDesignDocs (err,unmatched) ->
     return print(util.inspect(err)) if err
@@ -89,7 +98,7 @@ task 'couchdesign', 'check the design of the couchdb document', (options) ->
           print "MISSING"
         print "\n\n"
       if !options.update
-        print "use --update flag to update these.\n\n"
+        print "+++ use --update flag to update these.\n\n"
       else
         print "updating...\n"
         for nonmatch in unmatched

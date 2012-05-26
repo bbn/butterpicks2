@@ -1,21 +1,10 @@
 couch = exports
-couch.url = process.env.CLOUDANT_URL or "http://localhost:5984"
 
-nano = require("nano")(couch.url)
+couchUrl = process.env.CLOUDANT_URL or "http://localhost:5984"
+dbName = process.env.CLOUDANT_DB or process.env.testingDbName or 'picks'
+couch.db = require("nano")(couchUrl).use dbName
+console.log "couch: using '%s' database",dbName
 
-if process.env.CLOUDANT_DB
-  couch.dbname = process.env.CLOUDANT_DB
-else if process.env.testing
-  couch.dbname = 'picks-testing'
-else
-  couch.dbname = 'picks'
-  
-couch.db = nano.use couch.dbname
-console.log "using '%s' database",couch.dbname
-
-#
-# design documents
-#
 
 couch.designDocs = 
   facebookObjects:
@@ -24,6 +13,7 @@ couch.designDocs =
         map: "function (doc) { if (doc.facebookId) emit(doc.facebookId); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
+
 
 couch.identifyUnmatchedDesignDocs = (callback) ->
   error = false
