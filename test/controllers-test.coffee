@@ -50,7 +50,7 @@ exports.testGetFacebookObjectUser =
     test.ok facebookId, "cached model's faceboookId is ok"
     url = "/facebook-object?facebookId=#{facebookId}"
     x = mock.get url, { accept: "application/json" }
-    x.on 'success', (response) ->
+    x.on "success", (response) ->
       test.ok response, "response is ok"
       test.equal response.body.error,null,"error should be null"
       test.equal response.status, 200, "status should be 200"
@@ -63,3 +63,58 @@ exports.testGetFacebookObjectUser =
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: -> callback()
 
+
+exports.testCreateUser = 
+
+  testCreateUser: (test) ->
+    newUserData = 
+      facebookId: 123456789098765
+      email: "blerg@lala.mx"
+    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify newUserData
+    x.on "success", (response) =>
+      test.ok response, "response is ok"
+      test.equal response.status, 200, "status should be 200. response: #{util.inspect response}"
+      test.ok response.body.id, "should return a new id"
+      test.equal response.body.facebookId, newUserData.facebookId, "facebookId the same"
+      test.equal response.body.email, newUserData.email, "email the same"
+      @returnedId = response.body.id
+      test.done()
+
+  tearDown: (callback) ->
+    id = @returnedId
+    u = new User({ id:id })
+    u.fetch
+      error: (model,response) -> console.log "u.fetch response: #{util.inspect response}"
+      success: (model,response) ->
+        model.destroy
+          error: (model,response) -> console.log "model.destroy response: #{util.inspect response}"
+          success: -> callback()
+
+
+exports.testCreateUserWhoAlreadyExists = 
+
+  setUp: (callback) ->
+    @userData = 
+      facebookId: 3477728213
+      email: "whtaev@kdsj.mx"
+    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify @userData
+    x.on "success", (response) =>
+      @userId = response.body.id
+      callback()
+
+  testCreateUserWhoAlreadyExists: (test) ->
+    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify @userData
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,500
+      test.equal response.body, "user already exists"
+      test.done()
+
+  tearDown: (callback) ->
+    u = new User({ id:@userId })
+    u.fetch
+      error: (model,response) -> console.log "response: #{util.inspect response}"
+      success: (model,response) ->
+        model.destroy
+          error: (model,response) -> console.log "response: #{util.inspect response}"
+          success: -> callback()

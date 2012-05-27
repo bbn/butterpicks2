@@ -6,6 +6,7 @@
     "npm":  "1.x.x"
   },
   "dependencies": {
+    "request" : "latest",
     "nodeunit" : "latest",
     "node-static": "latest",
     "nano": "latest",

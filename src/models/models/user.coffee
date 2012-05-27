@@ -5,12 +5,10 @@ module.exports = class User extends Backbone.Model
   idAttribute: "_id"
 
   defaults:
-    email: null
-    createdAt: JSON.stringify(new Date())
     facebookId: null
-    name: null
-    butters: null
-    lifetimeUserPeriods: null
+    email: null
+    #createdDate: null
+
 
   #  loadData : function(callback) {
   #    var self = this;

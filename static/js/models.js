@@ -363,12 +363,8 @@ require.define("/models/user.js", function (require, module, exports, __dirname,
     User.prototype.idAttribute = "_id";
 
     User.prototype.defaults = {
-      email: null,
-      createdAt: JSON.stringify(new Date()),
       facebookId: null,
-      name: null,
-      butters: null,
-      lifetimeUserPeriods: null
+      email: null
     };
 
     return User;

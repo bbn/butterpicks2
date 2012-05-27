@@ -4,7 +4,8 @@ _ = require "underscore"
 util = require "util"
 couchUrl = process.env.CLOUDANT_URL or "http://localhost:5984"
 dbName = process.env.CLOUDANT_DB or process.env.testingDbName or 'picks'
-db = require("nano")(couchUrl).use dbName
+nano = require("nano")(couchUrl)
+db = nano.use dbName
 console.log "bbCouch: using '%s' database",dbName
 
 documentUpdateConflictError = () ->
@@ -27,8 +28,9 @@ exports.sync = (method,model,options) ->
   switch method
         
     when "read" 
-      error(new Error("no id")) unless model.id
-      db.get model.id, (err,body,header) ->
+      id = model.id or model.get("id")
+      error(new Error("no id")) unless id
+      db.get id, (err,body,header) ->
         return error(err) if err
         return success(tranformAttributesFromFetching body)
 
