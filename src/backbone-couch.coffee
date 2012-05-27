@@ -13,6 +13,14 @@ documentUpdateConflictError = () ->
   err.statusCode = 409
   return err
 
+transformAttributesForSaving = (attributes) ->
+  (attributes[key] = JSON.stringify(val)) for own key,val of attributes when key.match /Date$/
+  return attributes
+
+tranformAttributesFromFetching = (attributes) ->
+  (attributes[key] = new Date(JSON.parse(val))) for own key,val of attributes when key.match /Date$/
+  return attributes
+
 exports.sync = (method,model,options) ->
   success = options.success
   error = options.error
@@ -21,15 +29,17 @@ exports.sync = (method,model,options) ->
     when "read" 
       error(new Error("no id")) unless model.id
       db.get model.id, (err,body,header) ->
-        return error(err) if err 
-        return success(body)
+        return error(err) if err
+        return success(tranformAttributesFromFetching body)
 
     when "update","create" #backbone confuses creates for updates
       if model.get "_rev"
         db.get model.id, (err,body,header) ->
           return error(err) if err
           return error(documentUpdateConflictError()) if body._rev != model.get "_rev"
+          body = tranformAttributesFromFetching body
           newDoc = _(body).extend model.toJSON()
+          newDoc = transformAttributesForSaving newDoc
           db.insert newDoc, newDoc.id, (err,body,header) ->
             return error(err) if err
             return success 
@@ -37,7 +47,8 @@ exports.sync = (method,model,options) ->
               _id: body.id
               id: body.id
       else
-        return db.insert model.toJSON(), (err,body,header) ->
+        attributes = transformAttributesForSaving model.toJSON()
+        return db.insert attributes, (err,body,header) ->
           return error(err) if err
           return success 
             _rev: body.rev

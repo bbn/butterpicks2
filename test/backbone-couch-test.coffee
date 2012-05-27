@@ -1,8 +1,9 @@
-util = require "util"
 Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 
+logErrorResponse = (model,response) ->
+  console.log "response: #{require('util').inspect response}"
 
 modelDefaults =
   a: 1
@@ -45,7 +46,7 @@ exports.createModel =
 
   tearDown: (callback) ->
     exports.createModel.teardownModel.destroy
-      error: (model,response) -> console.log "response: #{util.inspect response}"
+      error: logErrorResponse
       success: (model,response) -> callback()
 
 
@@ -76,7 +77,7 @@ exports.readModel =
 
   tearDown: (callback) ->
     exports.readModel.model.destroy
-      error: (model,response) -> console.log "response: #{util.inspect response}"
+      error: logErrorResponse
       success: (model,response) -> callback()
 
 
@@ -117,7 +118,7 @@ exports.updateModel =
 
   tearDown: (callback) ->
     exports.updateModel.model.destroy
-      error: (model,response) -> console.log "response: #{util.inspect response}"
+      error: logErrorResponse
       success: (model,response) -> callback()
 
 
@@ -133,10 +134,10 @@ exports.destroyModel =
 
   testDestroyModel: (test) ->
     exports.destroyModel.model.destroy
-      error: (model,response) -> console.log "response: #{util.inspect response}"
+      error: logErrorResponse
       success: (model,response) -> 
         model.fetch 
-          success: (model,response) -> console.log "response: #{util.inspect response}"
+          success: logErrorResponse
           error: (model,response) -> 
             test.equal response.status_code, 404, "expect 404"
             test.equal response.error, 'not_found', "expect not_found"
@@ -162,14 +163,44 @@ exports.testMultipleRevisionDestroy =
     test.ok model.get("_rev"), "_rev is ok"
     test.equal model.get("_rev")[0], '2', "revision is #2"
     model.destroy
-      error: (model,response) -> console.log "response: #{util.inspect response}"
+      error: logErrorResponse
       success: (model,response) ->
         test.ok model, "model is ok after deleting"
         test.ok model.id, "model still has id after deleting"
         newModel = new TestModel({ id: model.id })
         newModel.fetch
-          success: (model,response) -> console.log "response: #{util.inspect response}"
+          success: logErrorResponse
           error: (model,response) -> 
             test.equal response.status_code, 404, "expect 404"
             test.equal response.error, 'not_found', "expect not_found"
             test.done()
+
+
+exports.testFetchingDate = 
+
+  setUp: (callback) ->
+    exports.testFetchingDate.date = new Date()
+    x = new TestModel({someDate: exports.testFetchingDate.date})
+    x.save x.toJSON(),
+      error: logErrorResponse
+      success: (model,response) -> 
+        exports.testFetchingDate.modelId = model.id        
+        exports.testFetchingDate.model = model
+        callback()
+
+  testDates: (test) ->
+    id = exports.testFetchingDate.modelId
+    x = new TestModel({ id:id })
+    x.fetch
+      error: logErrorResponse
+      success: (model,response) ->
+        test.ok model, "model is ok"
+        d = model.get("someDate")
+        test.equal Object.prototype.toString.call(d), "[object Date]", "properly typed"
+        test.equal JSON.stringify(d), JSON.stringify(exports.testFetchingDate.date), "same dates"
+        test.done()
+
+  tearDown: (callback) -> 
+    exports.testFetchingDate.model.destroy
+      error: logErrorResponse
+      success: -> callback()
