@@ -28,6 +28,7 @@ exports.createUser =
         test.ok model.get("_rev"), "has _rev"
         test.equal model.get("facebookId"), newUserAttributes.facebookId
         test.equal model.get("email"), newUserAttributes.email
+        test.equal model.get("doctype"), "User"
         exports.createUser.teardownModel = model
         test.done()
 
@@ -61,6 +62,7 @@ exports.testFetchUser =
         test.equal model.id, id, "same id"
         test.equal model.get("facebookId"),@userAttributes.facebookId,"same facebookId"
         test.equal model.get("email"),@userAttributes.email,"same email"
+        test.equal model.get("doctype"),"User"
         test.done()
 
   tearDown: (callback) ->

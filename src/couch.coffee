@@ -11,6 +11,14 @@ couch.designDocs =
     views:
       allByFacebookId:
         map: "function (doc) { if (doc.facebookId) emit(doc.facebookId); }"
+  butters:
+    views:
+      byUserId:
+        map: "function (doc) { if (doc.doctype=='ButterTransaction') emit([doc.userId, doc.createdDate], doc.amount); }"
+        reduce: "function (keys,values,rereduce) { return sum(values); }"
+      byDate:
+        map: "function (doc) { if (doc.doctype=='ButterTransaction') emit(doc.createdDate, doc.amount); }"
+        reduce: "function (keys,values,rereduce) { return sum(values); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
 

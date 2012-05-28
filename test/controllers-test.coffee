@@ -28,7 +28,7 @@ exports.testGetFacebookObjectMissingFacebookId = (test) ->
   x.on 'success', (response) ->
     test.ok response
     test.equal response.body.error,"no facebookId param"
-    test.equal response.status, 403 
+    test.equal response.status, 400
     test.done()
 
 
@@ -106,7 +106,7 @@ exports.testCreateUserWhoAlreadyExists =
     x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify @userData
     x.on "success", (response) =>
       test.ok response
-      test.equal response.status,500
+      test.equal response.status,409
       test.equal response.body, "user already exists"
       test.done()
 

@@ -5,6 +5,7 @@ module.exports = class User extends Backbone.Model
   idAttribute: "_id"
 
   defaults:
+    doctype: "User"
     facebookId: null
     email: null
     #createdDate: null

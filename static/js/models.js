@@ -344,30 +344,34 @@ exports.extname = function(path) {
 
 });
 
-require.define("/models/user.js", function (require, module, exports, __dirname, __filename) {
+require.define("/models/butter-transaction.js", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Backbone, User,
+  var Backbone, ButterTransaction,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   Backbone = require("backbone");
 
-  module.exports = User = (function(_super) {
+  module.exports = ButterTransaction = (function(_super) {
 
-    __extends(User, _super);
+    __extends(ButterTransaction, _super);
 
-    function User() {
-      User.__super__.constructor.apply(this, arguments);
+    function ButterTransaction() {
+      ButterTransaction.__super__.constructor.apply(this, arguments);
     }
 
-    User.prototype.idAttribute = "_id";
+    ButterTransaction.prototype.idAttribute = "_id";
 
-    User.prototype.defaults = {
-      facebookId: null,
-      email: null
+    ButterTransaction.prototype.defaults = {
+      userId: null,
+      pickId: null,
+      amount: null,
+      createdDate: null,
+      note: null,
+      doctype: "ButterTransaction"
     };
 
-    return User;
+    return ButterTransaction;
 
   })(Backbone.Model);
 
@@ -2881,11 +2885,45 @@ require.define("/node_modules/underscore/underscore.js", function (require, modu
 
 });
 
+require.define("/models/user.js", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Backbone, User,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Backbone = require("backbone");
+
+  module.exports = User = (function(_super) {
+
+    __extends(User, _super);
+
+    function User() {
+      User.__super__.constructor.apply(this, arguments);
+    }
+
+    User.prototype.idAttribute = "_id";
+
+    User.prototype.defaults = {
+      doctype: "User",
+      facebookId: null,
+      email: null
+    };
+
+    return User;
+
+  })(Backbone.Model);
+
+}).call(this);
+
+});
+
 require.define("/models.js", function (require, module, exports, __dirname, __filename) {
     (function() {
   var models;
 
   models = exports;
+
+  models.ButterTransaction = require("./models/butter-transaction");
 
   models.User = require("./models/user");
 
