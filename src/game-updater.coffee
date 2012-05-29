@@ -15,8 +15,13 @@ exports.getMostRecentlyUpdatedGameDate = getMostRecentlyUpdatedGameDate = (optio
     options.success date, body
 
 
+pollInterval = null
+exports.poll (interval) ->
+  pollInterval = interval if interval
+  setTimeout(updateGames({poll:true}), pollInterval) if pollInterval
 
-updateGames = ->
+
+updateGames = (options) ->
   getMostRecentlyUpdatedGameDate
     error: (_,error) ->
       console.log "!! error in getMostRecentlyUpdatedGameDate: #{util.inspect error}"
@@ -29,6 +34,9 @@ updateGames = ->
         json: true
       request.get requestParams, (error,response,body) ->
         console.log "returned body! #{body}"
+
+
+        exports.poll() if options and options.poll
 
 
   # game_info = json.read(data.content)
