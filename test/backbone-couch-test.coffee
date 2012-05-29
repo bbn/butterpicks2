@@ -235,3 +235,16 @@ exports.testNestedJson = (test) ->
           model.destroy
             error: logErrorResponse
             success: -> test.done()
+
+
+exports.testFetchMissingModel = (test) ->
+  x = new TestModel({ id: "ilikezoomers"})
+  x.fetch
+    error: (model,response) ->
+      test.ok model
+      test.equal model.id, "ilikezoomers"
+      test.equal response.status_code, 404, "expect 404"
+      test.equal response.error, 'not_found', "expect not_found"
+      test.done()
+    success: (model,response) ->
+      console.log "huh?"
