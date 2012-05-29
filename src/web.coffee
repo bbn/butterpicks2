@@ -34,3 +34,6 @@ server = http.createServer (req,res) ->
 port = process.env.PORT || 3000
 server.listen port
 console.log "listening on #{port}"
+
+gameUpdater = require "./game-updater"
+gameUpdater.poll 1000

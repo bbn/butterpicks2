@@ -48,7 +48,3 @@ exports.router.map ->
         userId: params.userId
         butters: value
 
-
-
-
-

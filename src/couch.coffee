@@ -19,6 +19,10 @@ couch.designDocs =
       byDate:
         map: "function (doc) { if (doc.doctype=='ButterTransaction') emit(doc.createdDate, doc.amount); }"
         reduce: "function (keys,values,rereduce) { return sum(values); }"
+  games:
+    views:
+      mostRecentlyUpdated:
+        map: "function (doc) { if (doc.doctype=='Game') emit(doc.statsLatestUpdateDate, null); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
 

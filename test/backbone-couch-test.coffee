@@ -204,3 +204,34 @@ exports.testFetchingDate =
     exports.testFetchingDate.model.destroy
       error: logErrorResponse
       success: -> callback()
+
+
+exports.testNestedJson = (test) ->
+  x = new TestModel()
+  x.set
+    nest:
+      x: 99
+      y: 88
+      z: "goof"
+  x.save x.toJSON(),
+    error: logErrorResponse
+    success: (model,response) ->
+      test.ok model, "model is ok"
+      nest = model.get "nest"
+      test.equal nest.x,99
+      test.equal nest.y,88
+      test.equal nest.z,"goof"
+      test.ok model.id
+      y = new TestModel({ id: model.id })
+      y.fetch
+        error: logErrorResponse
+        success: (model,response) ->
+          test.ok model, "model is ok"
+          nest = model.get "nest"
+          test.equal nest.x,99
+          test.equal nest.y,88
+          test.equal nest.z,"goof"          
+          #cleanup
+          model.destroy
+            error: logErrorResponse
+            success: -> test.done()
