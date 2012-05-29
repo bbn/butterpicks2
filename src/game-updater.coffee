@@ -16,9 +16,9 @@ exports.getMostRecentlyUpdatedGameDate = getMostRecentlyUpdatedGameDate = (optio
 
 
 pollInterval = null
-exports.poll (interval) ->
+exports.poll = poll = (interval) ->
   pollInterval = interval if interval
-  setTimeout(updateGames({poll:true}), pollInterval) if pollInterval
+  setTimeout( (-> updateGames({poll:true})), pollInterval) if pollInterval
 
 
 updateGames = (options) ->
@@ -36,7 +36,7 @@ updateGames = (options) ->
         console.log "returned body! #{body}"
 
 
-        exports.poll() if options and options.poll
+        poll() if options and options.poll
 
 
   # game_info = json.read(data.content)
