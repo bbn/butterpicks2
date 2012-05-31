@@ -2,8 +2,6 @@ Backbone = require "backbone"
 
 module.exports = class Game extends Backbone.Model
 
-  idAttribute: "_id"
-
   defaults:
     doctype: "Game"
     statsKey: null
@@ -13,9 +11,11 @@ module.exports = class Game extends Backbone.Model
       abbreviation: null
     awayTeam:
       statsKey: null
+      location: null
       name: null
     homeTeam:
       statsKey: null
+      location: null
       name: null
     startDate: null
     status:
@@ -25,13 +25,19 @@ module.exports = class Game extends Backbone.Model
       text: null #eg, "3rd period"
       final: null
       legit: null
-      postponed: null
     pickCount:
       home: null
       away: null
       draw: null
     basePeriodKey: null
 
+
+  postponed: ->
+    status = @get "status"
+    return false unless status.text
+    return true if status.text.match /postponed/
+    return false
+    
 
   secondsUntilDeadline: ->
     start = @get "startDate"

@@ -23,6 +23,10 @@ couch.designDocs =
     views:
       mostRecentlyUpdated:
         map: "function (doc) { if (doc.doctype=='Game') emit(doc.statsLatestUpdateDate, null); }"
+  periods:
+    views:
+      byLeagueCategoryAndDates:
+        map: "function (doc) { if (doc.doctype=='Period') emit([doc.league.statsKey,doc.category,doc.startDate,doc.endDate],null); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
 

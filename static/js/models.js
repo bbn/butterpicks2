@@ -363,12 +363,12 @@ require.define("/models/butter-transaction.js", function (require, module, expor
     ButterTransaction.prototype.idAttribute = "_id";
 
     ButterTransaction.prototype.defaults = {
+      doctype: "ButterTransaction",
       userId: null,
       pickId: null,
       amount: null,
       createdDate: null,
-      note: null,
-      doctype: "ButterTransaction"
+      note: null
     };
 
     return ButterTransaction;
@@ -2901,8 +2901,6 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       Game.__super__.constructor.apply(this, arguments);
     }
 
-    Game.prototype.idAttribute = "_id";
-
     Game.prototype.defaults = {
       doctype: "Game",
       statsKey: null,
@@ -2913,10 +2911,12 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       },
       awayTeam: {
         statsKey: null,
+        location: null,
         name: null
       },
       homeTeam: {
         statsKey: null,
+        location: null,
         name: null
       },
       startDate: null,
@@ -2927,8 +2927,7 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
         },
         text: null,
         final: null,
-        legit: null,
-        postponed: null
+        legit: null
       },
       pickCount: {
         home: null,
@@ -2936,6 +2935,14 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
         draw: null
       },
       basePeriodKey: null
+    };
+
+    Game.prototype.postponed = function() {
+      var status;
+      status = this.get("status");
+      if (!status.text) return false;
+      if (status.text.match(/postponed/)) return true;
+      return false;
     };
 
     Game.prototype.secondsUntilDeadline = function() {
@@ -2946,6 +2953,43 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
     };
 
     return Game;
+
+  })(Backbone.Model);
+
+}).call(this);
+
+});
+
+require.define("/models/period.js", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Backbone, Period,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Backbone = require("backbone");
+
+  module.exports = Period = (function(_super) {
+
+    __extends(Period, _super);
+
+    function Period() {
+      Period.__super__.constructor.apply(this, arguments);
+    }
+
+    Period.prototype.defaults = {
+      doctype: "Period",
+      league: {
+        statsKey: null
+      },
+      category: null,
+      startDate: null,
+      endDate: null,
+      name: null,
+      userCount: null,
+      games: null
+    };
+
+    return Period;
 
   })(Backbone.Model);
 
@@ -2969,12 +3013,11 @@ require.define("/models/user.js", function (require, module, exports, __dirname,
       User.__super__.constructor.apply(this, arguments);
     }
 
-    User.prototype.idAttribute = "_id";
-
     User.prototype.defaults = {
       doctype: "User",
       facebookId: null,
-      email: null
+      email: null,
+      createdDate: new Date()
     };
 
     return User;
@@ -2994,6 +3037,8 @@ require.define("/models.js", function (require, module, exports, __dirname, __fi
   models.ButterTransaction = require("./models/butter-transaction");
 
   models.Game = require("./models/game");
+
+  models.Period = require("./models/period");
 
   models.User = require("./models/user");
 

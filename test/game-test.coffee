@@ -18,7 +18,7 @@ exports.couchViewForMostRecentlyUpdatedGame = (test) ->
   gameUpdater.getMostRecentlyUpdatedGameDate
     error: logErrorResponse
     success: (d0,response) ->
-      test.equal d0,null,"date should be null"
+      test.equal d0,null,"date should be null. #{d0}"
       g = new Game
         statsKey: "sahgdjhagsjd281"
         statsLatestUpdateDate: new Date("Jan 1 2000")
@@ -53,3 +53,14 @@ exports.couchViewForMostRecentlyUpdatedGame = (test) ->
                             error: logErrorResponse
                             success: -> test.done()
 
+
+exports.testFetchingMissingGame = (test) ->
+  g = new Game({ id: "sdfgn128o7nz"})
+  g.fetch
+    success: logErrorResponse
+    error: (model,response) ->
+      test.equal response.status_code, 404, "expect 404"
+      test.equal response.error, 'not_found', "expect not_found"
+      test.ok model
+      test.equal model.id, "sdfgn128o7nz"
+      test.done()

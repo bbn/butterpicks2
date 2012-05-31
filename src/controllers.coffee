@@ -39,12 +39,32 @@ exports.router.map ->
     return res.send 400,{},{error:"no userId param"} unless params.userId
     viewParams =
       group_level: 1
-      startkey: [params.userId,'"1970-01-01T00:00:00.000Z"']
-      endkey: [params.userId,'"2070-01-01T00:00:00.000Z"']
+      startkey: [params.userId,'1970-01-01T00:00:00.000Z']
+      endkey: [params.userId,'2070-01-01T00:00:00.000Z']
     couch.db.view "butters","byUserId", viewParams, (err,body,headers) ->
       return res.send 500,{},err if err
       value = if body.rows.length then body.rows[0].value else null
       res.send 
         userId: params.userId
         butters: value
+
+
+  @get("/period").bind (req,res,params) ->
+    return res.send 400,{},{error:"no category param"} unless params.category
+    return res.send 400,{},{error:"no leagueStatsKey param"} unless params.leagueStatsKey
+    switch params.category
+      when "daily"
+        return res.send 400,{},{error:"no date param"} unless params.date
+        d = new Date(params.date)
+        dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
+        periodId = "#{params.leagueStatsKey}_#{params.category}_#{dateString}"
+      when "lifetime"
+        periodId = "#{params.leagueStatsKey}_#{params.category}"
+    p = new models.Period({ id:periodId })
+    p.fetch
+      error: (model,response) ->
+        console.log "doesn't exist? TODO create it"
+        res.send response
+      success: (model,response) ->
+        res.send model.toJSON()
 

@@ -12,16 +12,6 @@ modelDefaults =
 
 class TestModel extends Backbone.Model
   defaults: modelDefaults
-  url: =>
-    return @get "_id"
-
-
-exports.testURL = (test) ->
-  x = new TestModel( { _id:"blerg" } )
-  test.ok x.url
-  test.equal typeof(x.url),"function"
-  test.equal x.url(), "blerg"
-  test.done()
 
 
 exports.createModel = 
@@ -197,7 +187,7 @@ exports.testFetchingDate =
         test.ok model, "model is ok"
         d = model.get("someDate")
         test.equal Object.prototype.toString.call(d), "[object Date]", "properly typed"
-        test.equal JSON.stringify(d), JSON.stringify(exports.testFetchingDate.date), "same dates"
+        test.equal d.toJSON(), exports.testFetchingDate.date.toJSON(), "same dates"
         test.done()
 
   tearDown: (callback) -> 
@@ -240,11 +230,49 @@ exports.testNestedJson = (test) ->
 exports.testFetchMissingModel = (test) ->
   x = new TestModel({ id: "ilikezoomers"})
   x.fetch
+    success: -> console.log "huh?"
     error: (model,response) ->
       test.ok model
       test.equal model.id, "ilikezoomers"
       test.equal response.status_code, 404, "expect 404"
       test.equal response.error, 'not_found', "expect not_found"
       test.done()
-    success: (model,response) ->
-      console.log "huh?"
+
+
+exports.testCreatingUniquelyNamedModel = (test) ->
+  id = "dib1287ez1n2egnougnq"
+  x = new TestModel({ id: id })
+  x.fetch
+    success: -> console.log "huh?"
+    error: (model,response) ->
+      test.ok model
+      test.equal model.id, id
+      test.equal response.status_code, 404, "expect 404"
+      test.equal response.error, 'not_found', "expect not_found"
+      roland =
+        a: 101
+        b: 202
+        c: 808
+        d: 909
+      x.save roland,
+        error: -> console.log "huh?"
+        success: (model,response) ->
+          test.ok model
+          test.equal model.id, id
+          test.equal model.get("a"), roland.a
+          test.equal model.get("b"), roland.b
+          test.equal model.get("c"), roland.c
+          test.equal model.get("d"), roland.d
+          y = new TestModel({ id: id })
+          y.fetch
+            error: -> console.log "HUUUUH??"
+            success: (model,response) ->
+              test.ok model
+              test.equal model.id, id
+              test.equal model.get("a"), roland.a
+              test.equal model.get("b"), roland.b
+              test.equal model.get("c"), roland.c
+              test.equal model.get("d"), roland.d
+              model.destroy
+                error: -> console.log "?sdakldjkaj"
+                success: -> test.done()

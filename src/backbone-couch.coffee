@@ -15,11 +15,13 @@ documentUpdateConflictError = () ->
   return err
 
 transformAttributesForSaving = (attributes) ->
-  (attributes[key] = JSON.stringify(val)) for own key,val of attributes when key.match /Date$/
+  (attributes[key] = val.toJSON()) for own key,val of attributes when (key.match(/Date$/) and val)
+  attributes._id = attributes.id if attributes.id
   return attributes
 
 tranformAttributesFromFetching = (attributes) ->
-  (attributes[key] = new Date(JSON.parse(val))) for own key,val of attributes when key.match /Date$/
+  (attributes[key] = new Date(val)) for own key,val of attributes when (key.match(/Date$/) and val)
+  attributes.id = attributes._id if attributes._id
   return attributes
 
 exports.sync = (method,model,options) ->

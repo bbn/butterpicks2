@@ -4,12 +4,7 @@ util = require 'util'
 {print} = require 'util'
 {spawn} = require 'child_process'
 
-PRODUCTION_CLOUDANT_URL = "nonsense"
-###
-TODO replace "nonsense" with new cloudant URL instance
-eg: the pools cloudant URL was
-https://app1777531.heroku:885tk871iqj5ooraJQC4L5gS@app1777531.heroku.cloudant.com"
-###
+PRODUCTION_CLOUDANT_URL = "https://app1945930.heroku:w2sh1F5WdYdbThudBIyvCuIG@app1945930.heroku.cloudant.com"
 
 sources = 
   "lib":"src"

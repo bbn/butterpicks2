@@ -63,7 +63,7 @@ exports.testButters =
           y.on 'success', (response) =>
             test.equal response.status, 200 
             test.equal response.body.userId,@userModel.id, "same user id"
-            test.equal response.body.butters,1, "should have 1 butter"
+            test.equal response.body.butters,1, "should have 1 butter. #{util.inspect response.body.butters}"
             tr2 = new ButterTransaction
               userId: @userModel.id
               amount: 100
@@ -84,7 +84,6 @@ exports.testButters =
                     amount: -1
                     createdDate: new Date()
                     note: "pick"
-                  test.ok false, "replace dummy string with real pick create and ID"
                   tr3.save tr3.toJSON(),
                     error: (model,response) -> console.log util.inspect response
                     success: (model,response) =>
