@@ -70,7 +70,7 @@ exports.testCreateUser =
     newUserData = 
       facebookId: 123456789098765
       email: "blerg@lala.mx"
-    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify newUserData
+    x = mock.post "/user", { accept: "application/json" }, JSON.stringify newUserData
     x.on "success", (response) =>
       test.ok response, "response is ok"
       test.equal response.status, 200, "status should be 200. response: #{util.inspect response}"
@@ -97,13 +97,13 @@ exports.testCreateUserWhoAlreadyExists =
     @userData = 
       facebookId: 3477728213
       email: "whtaev@kdsj.mx"
-    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify @userData
+    x = mock.post "/user", { accept: "application/json" }, JSON.stringify @userData
     x.on "success", (response) =>
       @userId = response.body.id
       callback()
 
   testCreateUserWhoAlreadyExists: (test) ->
-    x = mock.post "/user/create", { accept: "application/json" }, JSON.stringify @userData
+    x = mock.post "/user", { accept: "application/json" }, JSON.stringify @userData
     x.on "success", (response) =>
       test.ok response
       test.equal response.status,409

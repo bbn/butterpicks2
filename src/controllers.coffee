@@ -18,7 +18,7 @@ exports.router.map ->
       res.send body
 
 
-  @post("/user/create").bind (req,res,params) ->
+  @post("/user").bind (req,res,params) ->
     return res.send 400,{},{error:"no facebookId param"} unless params.facebookId
     return res.send 400,{},{error:"no email param"} unless params.email
     couch.db.view "facebookObjects","allByFacebookId", { key:params.facebookId }, (err,body,headers) ->
