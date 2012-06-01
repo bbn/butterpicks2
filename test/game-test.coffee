@@ -1,5 +1,11 @@
 util = require "util"
 
+journey = require "journey"
+controllers = require "../lib/controllers"
+mockRequest = require "../node_modules/journey/lib/journey/mock-request"
+mock = mockRequest.mock controllers.router
+journey.env = "test"
+
 Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
@@ -63,4 +69,155 @@ exports.testFetchingMissingGame = (test) ->
       test.equal response.error, 'not_found', "expect not_found"
       test.ok model
       test.equal model.id, "sdfgn128o7nz"
+      test.done()
+
+
+exports.testGamePost = (test) ->
+  data = 
+    statsKey: "9128b89e7g12qwiuexbqiuwbe128"
+    updated_at: 1338482433
+    league: "MLB"
+    leagueStatsKey: "1028ei1e2nhiouznhn1z2"
+    away_team:
+      key: "7v8tfgy9humi"
+      location: "Chicago"
+      name: "Cubs"
+    home_team:
+      key: "u1zdhqlkajshd"
+      location: "Boston"
+      name: "Red Sox"
+    starts_at: 1338482480
+    away_score: 7
+    home_score: 2
+    status: "7th inning"
+    final: false
+    legit: true
+  x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
+  x.on 'success', (response) ->
+    test.equal response.status,201
+    test.equal response.body.doctype,"Game"
+    test.equal response.body.statsKey,data.statsKey
+    test.equal response.body.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+    test.equal response.body.league.abbreviation,data.league
+    test.equal response.body.league.statsKey,data.leagueStatsKey
+    test.equal response.body.awayTeam.statsKey,data.away_team.key
+    test.equal response.body.awayTeam.location,data.away_team.location
+    test.equal response.body.awayTeam.name,data.away_team.name
+    test.equal response.body.homeTeam.statsKey,data.home_team.key
+    test.equal response.body.homeTeam.location,data.home_team.location
+    test.equal response.body.homeTeam.name,data.home_team.name
+    test.equal response.body.startDate,(new Date(data.starts_at*1000)).toJSON()
+    test.equal response.body.status.score.away,data.away_score
+    test.equal response.body.status.score.home,data.home_score
+    test.equal response.body.status.text,data.status
+    test.equal response.body.status.final,data.final
+    test.equal response.body.legit,data.legit
+    test.equal response.body.pickCount.home,null
+    test.equal response.body.pickCount.away,null
+    test.equal response.body.pickCount.draw,null
+    test.ok response.body.id
+
+    test.ok response.body.basePeriodKey, "#currently failing!"
+    
+    g = new Game({id:response.body.id})
+    g.fetch
+      error: logErrorResponse
+      success: (model,response) ->
+        model.destroy
+          error: logErrorResponse
+          success: -> test.done()
+
+
+exports.testGamePostUpdate =
+
+  setUp: (callback) ->
+    @gameData =
+      statsKey: 'nrx1nx1rn89n1n89r1'
+      id: 'game_nrx1nx1rn89n1n89r1'
+      statsLatestUpdateDate: new Date(2010,1,1)
+      league: 
+        abbreviation: 'MLB'
+        statsKey: 'r1373r782'
+      awayTeam: 
+        statsKey: 'xn893rpiqu3hni'
+        location: 'Chicago'
+        name: 'Cubs'
+      homeTeam: 
+        statsKey: '78oniuynoiuy'
+        location: 'Boston'
+        name: 'Red Sox'
+      startDate: new Date(2010,2,2)
+      status:
+        score: 
+          home: 72
+          away: 1
+        text: '2nd inning'
+        final: false
+      legit: true
+      pickCount:
+        home: 2536
+        away: 1234
+        draw: null
+      basePeriodKey: "o2enx1khad89"
+    g = new Game(@gameData)
+    g.save g.toJSON(),
+      error: logErrorResponse
+      success: (model,response) =>
+        @model = model
+        callback()
+
+  tearDown: (callback) ->
+    return callback() unless @model
+    @model.fetch
+      error: logErrorResponse
+      success: =>
+        @model.destroy
+          error: logErrorResponse
+          success: -> callback()
+
+  testGamePostUpdate: (test) ->
+    data = 
+      statsKey: @gameData.statsKey
+      updated_at: (new Date(2010,1,2)).valueOf()/1000
+      league: "MLB"
+      leagueStatsKey: "r1373r782"
+      away_team:
+        key: "xn893rpiqu3hni"
+        location: "Chicago"
+        name: "Cubs"
+      home_team:
+        key: "78oniuynoiuy"
+        location: "Boston"
+        name: "Red Sox"
+      starts_at: (new Date(2010,2,2)).valueOf()/1000
+      away_score: 72
+      home_score: 2
+      status: "7th inning"
+      final: false
+      legit: true
+    x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
+    x.on 'success', (response) =>
+      test.equal response.status,201
+      test.equal response.body.doctype,"Game"
+      test.equal response.body.statsKey,data.statsKey
+      test.equal response.body.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+      test.equal response.body.league.abbreviation,data.league
+      test.equal response.body.league.statsKey,data.leagueStatsKey
+      test.equal response.body.awayTeam.statsKey,data.away_team.key
+      test.equal response.body.awayTeam.location,data.away_team.location
+      test.equal response.body.awayTeam.name,data.away_team.name
+      test.equal response.body.homeTeam.statsKey,data.home_team.key
+      test.equal response.body.homeTeam.location,data.home_team.location
+      test.equal response.body.homeTeam.name,data.home_team.name
+      test.equal response.body.startDate,(new Date(data.starts_at*1000)).toJSON()
+      test.equal response.body.status.score.away,data.away_score
+      test.equal response.body.status.score.home,data.home_score
+      test.equal response.body.status.text,data.status
+      test.equal response.body.status.final,data.final
+      test.equal response.body.legit,data.legit
+      test.equal response.body.pickCount.home,@gameData.pickCount.home
+      test.equal response.body.pickCount.away,@gameData.pickCount.away
+      test.equal response.body.pickCount.draw,@gameData.pickCount.draw
+      test.ok response.body.id
+      test.ok response.body.basePeriodKey 
       test.done()

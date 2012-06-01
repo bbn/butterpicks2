@@ -1,9 +1,10 @@
+util = require "util"
 Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 
 logErrorResponse = (model,response) ->
-  console.log "response: #{require('util').inspect response}"
+  console.log "response: #{util.inspect response}"
 
 modelDefaults =
   a: 1
@@ -276,3 +277,4 @@ exports.testCreatingUniquelyNamedModel = (test) ->
               model.destroy
                 error: -> console.log "?sdakldjkaj"
                 success: -> test.done()
+

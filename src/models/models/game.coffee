@@ -24,7 +24,7 @@ module.exports = class Game extends Backbone.Model
         home: null
       text: null #eg, "3rd period"
       final: null
-      legit: null
+    legit: null
     pickCount:
       home: null
       away: null

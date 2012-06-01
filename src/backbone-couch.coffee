@@ -8,21 +8,25 @@ nano = require("nano")(couchUrl)
 db = nano.use dbName
 console.log "bbCouch: using '%s' database",dbName
 
+
 documentUpdateConflictError = () ->
   err = new Error("Document update conflict.")
   err.reason = "Document update conflict."
   err.statusCode = 409
   return err
 
+
 transformAttributesForSaving = (attributes) ->
   (attributes[key] = val.toJSON()) for own key,val of attributes when (key.match(/Date$/) and val)
   attributes._id = attributes.id if attributes.id
   return attributes
 
+
 tranformAttributesFromFetching = (attributes) ->
   (attributes[key] = new Date(val)) for own key,val of attributes when (key.match(/Date$/) and val)
   attributes.id = attributes._id if attributes._id
   return attributes
+
 
 exports.sync = (method,model,options) ->
   success = options.success

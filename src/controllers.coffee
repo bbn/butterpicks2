@@ -1,12 +1,16 @@
+require "./date"
 util = require "util"
+request = require "request"
 
 couch = require "./couch"
 models = require "./models"
+require "./model-server-utils"
 
 journey = require "journey"
 exports.router = new journey.Router
 exports.router.map ->
   
+
   @root.bind (req,res) ->
     res.send "butterpicks2"
 
@@ -52,19 +56,41 @@ exports.router.map ->
   @get("/period").bind (req,res,params) ->
     return res.send 400,{},{error:"no category param"} unless params.category
     return res.send 400,{},{error:"no leagueStatsKey param"} unless params.leagueStatsKey
-    switch params.category
-      when "daily"
-        return res.send 400,{},{error:"no date param"} unless params.date
-        d = new Date(params.date)
-        dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
-        periodId = "#{params.leagueStatsKey}_#{params.category}_#{dateString}"
-      when "lifetime"
-        periodId = "#{params.leagueStatsKey}_#{params.category}"
+    return res.send 400,{},{error:"no date param"} unless params.date
+    periodId = models.Period.getCouchId params
     p = new models.Period({ id:periodId })
     p.fetch
-      error: (model,response) ->
-        console.log "doesn't exist? TODO create it"
-        res.send response
-      success: (model,response) ->
-        res.send model.toJSON()
+      error: (model,response) -> res.send response
+      success: (model,response) -> res.send model.toJSON()
+
+
+  @post("/game").bind (req,res,params) ->
+    g = new models.Game({ statsKey: params.statsKey, id: "game_#{params.statsKey}" })
+    console.log "+++ received new Game data for #{g.id}"    
+    g.fetch
+      error: (model,response) -> createGame model
+      success: (model,response) -> updateGame model
+    createGame = (game) ->
+      console.log "+++ creating #{game.id}"
+      updateGame game
+    updateGame = (game) =>
+      oldAttributes = game.toJSON()
+      oldBasePeriodId = game.getBasePeriodId()
+      game.updateAttributesFromStatServerParams params,
+        error: (game,response) ->
+          console.log "!!! error saving game: #{util.inspect response}"
+          res.send 500,{},response
+        success: (game,response) -> 
+          models.Period.getOrCreateBasePeriodForGame game,
+            error: (p,response) ->
+              console.log "error creating period #{p.id}: #{util.inspect response}"
+              return updatePeriods game,oldAttributes # TODO recurse a bad idea?
+            success: (p,response) ->
+              if p.get "final"
+                # TODO if the result has materially changed, 
+                # recalculate everybody's totals for one or both periods
+              if oldBasePeriodId != p.id
+                # TODO delete the old base period if there are no games and all associated participant periods
+
+              res.send model.toJSON()
 
