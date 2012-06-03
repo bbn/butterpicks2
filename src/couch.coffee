@@ -27,6 +27,12 @@ couch.designDocs =
     views:
       byLeagueCategoryAndDates:
         map: "function (doc) { if (doc.doctype=='Period') emit([doc.league.statsKey,doc.category,doc.startDate,doc.endDate],null); }"
+  jobs:
+    views:
+      byType:
+        map: "function (doc) { if (doc.job) emit([doc.doctype,doc.createdDate],null); }"
+      byDate:
+        map: "function (doc) { if (doc.job) emit([doc.createdDate,doc.doctype],null); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
 

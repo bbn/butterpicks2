@@ -10,8 +10,10 @@ Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
-
 Game = models.Game
+
+workers = require "../lib/workers"
+PeriodUpdateJob = workers.PeriodUpdateJob
 
 gameUpdater = require "../lib/game-updater"
 
@@ -37,7 +39,7 @@ exports.couchViewForMostRecentlyUpdatedGame = (test) ->
             error: logErrorResponse
             success: (d1,response) ->
               test.ok d1
-              test.equal JSON.stringify(d1), JSON.stringify(model.get("statsLatestUpdateDate")), "dates the same"
+              test.equal d1.toJSON(), model.get("statsLatestUpdateDate").toJSON()
               g2 = new Game
                 statsKey: "1zg8z1sg8"
                 statsLatestUpdateDate: new Date("Feb 1 2000")
@@ -50,7 +52,7 @@ exports.couchViewForMostRecentlyUpdatedGame = (test) ->
                     error: logErrorResponse
                     success: (d2,response) ->
                       test.ok d2
-                      test.equal JSON.stringify(d2), JSON.stringify(model2.get("statsLatestUpdateDate")), "dates2 the same"
+                      test.equal d2.toJSON(), model2.get("statsLatestUpdateDate").toJSON()
                       #cleanup
                       model.destroy
                         error: logErrorResponse
@@ -116,16 +118,24 @@ exports.testGamePost = (test) ->
     test.equal response.body.pickCount.away,null
     test.equal response.body.pickCount.draw,null
     test.ok response.body.id
-
-    test.ok response.body.basePeriodKey, "#currently failing!"
-    
-    g = new Game({id:response.body.id})
-    g.fetch
+    PeriodUpdateJob.getNext
+      limit: 2
       error: logErrorResponse
-      success: (model,response) ->
-        model.destroy
+      success: (jobs,_) ->
+        test.ok jobs
+        test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
+        test.equal jobs[0].get("league").statsKey,data.leagueStatsKey
+        test.ok jobs[0].id
+        jobs[0].destroy
           error: logErrorResponse
-          success: -> test.done()
+          success: ->
+            g = new Game({id:response.body.id})
+            g.fetch
+              error: logErrorResponse
+              success: (model,response) ->
+                model.destroy
+                  error: logErrorResponse
+                  success: -> test.done()
 
 
 exports.testGamePostUpdate =
@@ -220,4 +230,15 @@ exports.testGamePostUpdate =
       test.equal response.body.pickCount.draw,@gameData.pickCount.draw
       test.ok response.body.id
       test.ok response.body.basePeriodKey 
-      test.done()
+      PeriodUpdateJob.getNext
+        limit: 2
+        error: logErrorResponse
+        success: (jobs,_) ->
+          test.ok jobs
+          test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
+          test.equal jobs[0].get("league").statsKey,data.leagueStatsKey
+          test.ok jobs[0].id
+          jobs[0].destroy
+            error: logErrorResponse
+            success: ->
+              test.done()

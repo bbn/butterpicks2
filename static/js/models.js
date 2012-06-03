@@ -360,8 +360,6 @@ require.define("/models/butter-transaction.js", function (require, module, expor
       ButterTransaction.__super__.constructor.apply(this, arguments);
     }
 
-    ButterTransaction.prototype.idAttribute = "_id";
-
     ButterTransaction.prototype.defaults = {
       doctype: "ButterTransaction",
       userId: null,
@@ -2926,9 +2924,9 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
           home: null
         },
         text: null,
-        final: null,
-        legit: null
+        final: null
       },
+      legit: null,
       pickCount: {
         home: null,
         away: null,
@@ -2979,14 +2977,12 @@ require.define("/models/period.js", function (require, module, exports, __dirnam
     Period.prototype.defaults = {
       doctype: "Period",
       league: {
+        abbreviation: null,
         statsKey: null
       },
       category: null,
       startDate: null,
-      endDate: null,
-      name: null,
-      userCount: null,
-      games: null
+      endDate: null
     };
 
     return Period;
