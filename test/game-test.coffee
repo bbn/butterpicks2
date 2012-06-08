@@ -6,6 +6,8 @@ mockRequest = require "../node_modules/journey/lib/journey/mock-request"
 mock = mockRequest.mock controllers.router
 journey.env = "test"
 
+couch = require "../lib/couch"
+
 Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
@@ -14,6 +16,7 @@ Game = models.Game
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
+PeriodUpdateJob.workSuspended = true
 
 gameUpdater = require "../lib/game-updater"
 
@@ -242,3 +245,112 @@ exports.testGamePostUpdate =
             error: logErrorResponse
             success: ->
               test.done()
+
+
+exports.couchViewForGamesByLeagueAndStartDate = (test) ->
+  leagueStatsKey = "dqxugoqd7ngauidgas"
+  startDate = new Date(2012,1,1)
+  gameDate = new Date(2012,1,1,12,30)
+  endDate = new Date(2012,1,2)
+  laterGameDate = new Date(2012,1,2,12,30)
+  viewParams =
+    startkey: [leagueStatsKey,startDate.toJSON()]
+    endkey: [leagueStatsKey,endDate.toJSON()]
+    include_docs: true
+  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+    test.ok !err
+    test.ok body
+    test.ok body.rows
+    test.equal body.rows.length,0
+    g = new Game
+      league:
+        statsKey: leagueStatsKey
+      startDate: gameDate
+    g.save g.toJSON(),
+      error: logErrorResponse
+      success: (model,response) ->
+        test.ok model
+        test.ok model.id
+        test.equal model.get("league").statsKey,leagueStatsKey
+        test.equal model.get("startDate").toJSON(),gameDate.toJSON()
+        viewParams =
+          startkey: [leagueStatsKey,startDate.toJSON()]
+          endkey: [leagueStatsKey,endDate.toJSON()]
+          include_docs: true
+        couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+          test.ok !err
+          test.ok body
+          test.ok body.rows
+          test.equal body.rows.length, 1
+          test.ok body.rows[0].doc  
+          test.equal body.rows[0].doc._id, model.id
+          test.equal body.rows[0].doc.league.statsKey, leagueStatsKey
+          test.equal body.rows[0].doc.startDate, gameDate.toJSON()
+          gB = new Game
+            league:
+              statsKey: leagueStatsKey
+            startDate: laterGameDate
+          gB.save gB.toJSON(),
+            error: logErrorResponse
+            success: (modelB,response) ->
+              test.ok modelB
+              test.ok modelB.id
+              test.equal modelB.get("league").statsKey,leagueStatsKey
+              test.equal modelB.get("startDate").toJSON(),laterGameDate.toJSON()
+              viewParams =
+                startkey: [leagueStatsKey,startDate.toJSON()]
+                endkey: [leagueStatsKey,endDate.toJSON()]
+                include_docs: true
+              couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+                test.ok !err
+                test.ok body
+                test.ok body.rows
+                test.equal body.rows.length, 1, "should only pick up first game"
+                test.ok body.rows[0].doc  
+                test.equal body.rows[0].doc._id, model.id, "1st game, not 2nd"
+                modelB.destroy
+                  error: logErrorResponse
+                  success: ->
+                    model.destroy
+                      error: logErrorResponse
+                      success: -> test.done()
+
+
+
+  # gameUpdater.getMostRecentlyUpdatedGameDate
+  #   error: logErrorResponse
+  #   success: (d0,response) ->
+  #     test.equal d0,null,"date should be null. #{d0}"
+  #     g = new Game
+  #       statsKey: "sahgdjhagsjd281"
+  #       statsLatestUpdateDate: new Date("Jan 1 2000")
+  #     g.save g.toJSON(),
+  #       error: logErrorResponse
+  #       success: (model,response) ->
+  #         test.ok model
+  #         test.ok model.id
+  #         gameUpdater.getMostRecentlyUpdatedGameDate
+  #           error: logErrorResponse
+  #           success: (d1,response) ->
+  #             test.ok d1
+  #             test.equal d1.toJSON(), model.get("statsLatestUpdateDate").toJSON()
+  #             g2 = new Game
+  #               statsKey: "1zg8z1sg8"
+  #               statsLatestUpdateDate: new Date("Feb 1 2000")
+  #             g2.save g2.toJSON(),
+  #               error: logErrorResponse
+  #               success: (model2,response) ->
+  #                 test.ok model2
+  #                 test.ok model2.id
+  #                 gameUpdater.getMostRecentlyUpdatedGameDate
+  #                   error: logErrorResponse
+  #                   success: (d2,response) ->
+  #                     test.ok d2
+  #                     test.equal d2.toJSON(), model2.get("statsLatestUpdateDate").toJSON()
+  #                     #cleanup
+  #                     model.destroy
+  #                       error: logErrorResponse
+  #                       success: ->
+  #                         model2.destroy
+  #                           error: logErrorResponse
+  #                           success: -> test.done()

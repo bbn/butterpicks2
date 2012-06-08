@@ -118,4 +118,5 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
       p.save data,options
 
 
-Period::updateUserPeriods
+Period::fetchGames = ->
+  console.log "TODO use couchdb view"  

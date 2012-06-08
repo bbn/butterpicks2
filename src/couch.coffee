@@ -23,6 +23,8 @@ couch.designDocs =
     views:
       mostRecentlyUpdated:
         map: "function (doc) { if (doc.doctype=='Game') emit(doc.statsLatestUpdateDate, null); }"
+      byLeagueAndStartDate:
+        map: "function (doc) { if (doc.doctype=='Game') emit([doc.league.statsKey,doc.startDate], null);  }"
   periods:
     views:
       byLeagueCategoryAndDates:

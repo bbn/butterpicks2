@@ -5,6 +5,9 @@ Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
+require "../lib/model-server-utils"
+Period = models.Period
+Game = models.Game
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -18,6 +21,7 @@ logErrorResponse = (message) ->
 exports.createPeriodUpdateJob = 
 
   testCreatePeriodUpdateJob: (test) ->
+    PeriodUpdateJob.workSuspended = true
     @periodId = "nlxuiqnonorq2rq2"
     PeriodUpdateJob.create {periodId:@periodId},
       error: logErrorResponse
@@ -43,6 +47,7 @@ exports.createPeriodUpdateJob =
 exports.periodUpdateJobQueries = 
 
   setUp: (callback) ->
+    PeriodUpdateJob.workSuspended = true
     @periodId = "78x2oruqnlufhfklahs"
     PeriodUpdateJob.create {periodId:@periodId},
       error: logErrorResponse "setUp"
@@ -85,4 +90,60 @@ exports.periodUpdateJobQueries =
         test.ok job
         test.equal job.id, @modelId
         test.equal job.get("periodId"), @periodId
+        test.done()
+
+
+exports.periodUpdateJobWork = 
+
+  setUp: (callback) ->
+    @periodData = 
+      league:
+        statsKey: "xe2noiuhw9x23i"
+      category: "daily"
+      startDate: new Date("Jan 1, 2011")
+      endDate: new Date("Jan 2, 2011")
+    @periodData.id = Period.getCouchId
+      leagueStatsKey: @periodData.league.statsKey
+      category: @periodData.category
+      withinDate: @periodData.startDate
+    p = new Period(@periodData)
+    p.save p.toJSON(),
+      error: -> logErrorResponse
+      success: (model,response) =>
+        @period = model
+
+        #games
+        #user periods
+
+        PeriodUpdateJob.workSuspended = true
+        PeriodUpdateJob.create {periodId:@period.id},
+          error: logErrorResponse
+          success: (model,response) =>
+            @periodUpdateJob = model
+            callback()
+
+    
+
+  tearDown: (callback) ->
+    @period.destroy
+      error: logErrorResponse
+      success: =>
+        #delete games
+        #delete user periods
+        return callback() unless @periodUpdateJob
+        @periodUpdateJob.destroy
+          error: logErrorResponse
+          success: =>
+            callback()
+
+
+  periodUpdateJobWorkTest: (test) ->
+    test.ok @period
+    test.ok @period.id
+    test.ok @periodUpdateJob
+    test.ok @periodUpdateJob.id
+    @periodUpdateJob.work
+      error: logErrorResponse
+      success: (model,response) =>
+        test.equal model.id, @periodUpdateJob.id
         test.done()
