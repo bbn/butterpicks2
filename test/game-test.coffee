@@ -73,7 +73,7 @@ exports.testFetchingMissingGame = (test) ->
       test.equal response.status_code, 404, "expect 404"
       test.equal response.error, 'not_found', "expect not_found"
       test.ok model
-      test.equal model.id, "sdfgn128o7nz"
+      test.equal model.get("id"), "sdfgn128o7nz"
       test.done()
 
 

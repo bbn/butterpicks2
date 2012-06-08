@@ -2899,6 +2899,8 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       Game.__super__.constructor.apply(this, arguments);
     }
 
+    Game.prototype.idAttribute = "_id";
+
     Game.prototype.defaults = {
       doctype: "Game",
       statsKey: null,

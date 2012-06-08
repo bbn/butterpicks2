@@ -1,5 +1,6 @@
 util = require "util"
 
+couch = require "./couch"
 models = require "./models"
 Game = models.Game
 Period = models.Period
@@ -73,7 +74,6 @@ Game.attrFromStatServerParams = (params) ->
     legit: params.legit
 
 
-
 Game::basePeriodId = ->
   return null unless @get("leagueStatsKey") and @get(startDate)
   console.log "FIXME assumption of daily category for basePeriodId"
@@ -81,7 +81,6 @@ Game::basePeriodId = ->
     leagueStatsKey: @get "leagueStatsKey"
     category: "daily"
     date: @get "startDate"
-
 
 
 Period.getCouchId = (params) ->
@@ -118,5 +117,13 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
       p.save data,options
 
 
-Period::fetchGames = ->
-  console.log "TODO use couchdb view"  
+Period::fetchGames = (options) ->
+  viewParams =
+    startkey: [@get("league").statsKey, @get("startDate").toJSON()]
+    endkey:   [@get("league").statsKey, @get("endDate").toJSON()]
+    include_docs: true
+  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows
+    games = ((new Game(row.doc)) for row in body.rows)
+    options.success(games,headers)

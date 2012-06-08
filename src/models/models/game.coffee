@@ -2,6 +2,8 @@ Backbone = require "backbone"
 
 module.exports = class Game extends Backbone.Model
 
+  idAttribute: "_id"
+
   defaults:
     doctype: "Game"
     statsKey: null
