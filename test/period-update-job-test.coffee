@@ -15,7 +15,7 @@ PeriodUpdateJob = workers.PeriodUpdateJob
 
 logErrorResponse = (message) ->
   return (model,response) ->
-    console.log "#{message}-> response: #{util.inspect response}"
+    console.log "ERROR: #{message} -> response: #{util.inspect response}"
 
 
 exports.createPeriodUpdateJob = 
@@ -24,7 +24,7 @@ exports.createPeriodUpdateJob =
     PeriodUpdateJob.workSuspended = true
     @periodId = "nlxuiqnonorq2rq2"
     PeriodUpdateJob.create {periodId:@periodId},
-      error: logErrorResponse
+      error: logErrorResponse ""
       success: (model,response) =>
         test.ok model
         test.equal model.get("doctype"), "PeriodUpdateJob"
@@ -37,10 +37,10 @@ exports.createPeriodUpdateJob =
   tearDown: (callback) ->
     j = new PeriodUpdateJob {id:@modelId}
     j.fetch
-      error: logErrorResponse
+      error: logErrorResponse ""
       success: ->
         j.destroy 
-          error: logErrorResponse
+          error: logErrorResponse ""
           success: -> callback()
 
 
@@ -85,7 +85,7 @@ exports.periodUpdateJobQueries =
 
   testPeriodUpdateJobGetNext: (test) ->
     PeriodUpdateJob.getNext
-      error: logErrorResponse
+      error: logErrorResponse ""
       success: (job,response) =>
         test.ok job
         test.equal job.id, @modelId
@@ -108,7 +108,7 @@ exports.periodUpdateJobWork =
       withinDate: @periodData.startDate
     p = new Period(@periodData)
     p.save p.toJSON(),
-      error: -> logErrorResponse
+      error: -> logErrorResponse ""
       success: (model,response) =>
         @period = model
 
@@ -117,25 +117,22 @@ exports.periodUpdateJobWork =
 
         PeriodUpdateJob.workSuspended = true
         PeriodUpdateJob.create {periodId:@period.id},
-          error: logErrorResponse
+          error: logErrorResponse ""
           success: (model,response) =>
             @periodUpdateJob = model
             callback()
 
-    
-
   tearDown: (callback) ->
     @period.destroy
-      error: logErrorResponse
+      error: logErrorResponse ""
       success: =>
         #delete games
         #delete user periods
         return callback() unless @periodUpdateJob
         @periodUpdateJob.destroy
-          error: logErrorResponse
+          error: logErrorResponse ""
           success: =>
             callback()
-
 
   periodUpdateJobWorkTest: (test) ->
     test.ok @period
@@ -143,7 +140,7 @@ exports.periodUpdateJobWork =
     test.ok @periodUpdateJob
     test.ok @periodUpdateJob.id
     @periodUpdateJob.work
-      error: logErrorResponse
+      error: logErrorResponse "periodUpdateJob.work error"
       success: (model,response) =>
         test.equal model.id, @periodUpdateJob.id
         test.done()

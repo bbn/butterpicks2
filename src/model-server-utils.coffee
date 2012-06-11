@@ -126,4 +126,16 @@ Period::fetchGames = (options) ->
     return options.error(null,err) if err
     return options.success([],headers) unless body.rows
     games = ((new Game(row.doc)) for row in body.rows)
-    options.success(games,headers)
+    options.success games
+
+
+Period::fetchUserPeriods = (options) ->
+  viewParams =
+    startkey: [@.id, -99999999999]
+    endkey:   [@.id,  99999999999]
+    include_docs: true
+  couch.db.view "userPeriods","byPeriodIdAndPoints", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows
+    userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
+    options.success userPeriods

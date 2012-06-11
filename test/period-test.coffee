@@ -43,7 +43,7 @@ exports.testGetDailyPeriod =
   tearDown: (callback) ->
     return callback() unless @period
     @period.destroy
-      error: -> console.log "huh?"
+      error: -> logErrorResponse
       success: -> callback()
 
   testGetDailyPeriod: (test) ->
@@ -90,7 +90,7 @@ exports.testFetchGames =
   tearDown: (callback) ->
     return callback() unless @period
     @period.destroy
-      error: -> console.log "huh?"
+      error: -> logErrorResponse
       success: -> callback()
 
   testFetchGames: (test) ->
@@ -135,3 +135,7 @@ exports.testFetchGames =
                               error: logErrorResponse
                               success: =>
                                 test.done()
+
+  testFetchUserPeriods: (test) ->
+    test.ok false, "implement testFetchUserPeriods"
+    test.done()

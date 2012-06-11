@@ -29,17 +29,49 @@ module.exports = class PeriodUpdateJob extends Backbone.Model
     @fetchOrCreatePeriod
       error: options.error
       success: (period) =>
-        
-        # load all games associated with period
-        #   are there no games?
-        #     delete the period
-        #     fetch associated user periods
-        #       delete user periods
-        #   have the results of the games changed since last update? compare with some kind of cached profile
-        #     should we recalculate all user periods?
-        #       fetch all user periods
-        #         recalc each user period (another worker)
-        options.success @
+        @period = period
+        @period.fetchGames
+          error: options.error
+          success: (games) =>
+            @games = games
+            process = if @games then @updatePeriod else @deletePeriod
+            process.call @,
+              error: options.error
+              success: => options.success @
+
+
+  deletePeriod: (options) ->
+    @period.destroy
+      error: options.error
+      success: =>
+        @updateUserPeriods
+          error: options.error
+          success: options.success
+
+
+  updatePeriod: (options) ->
+    console.log "TODO: only updateUserPeriods if results of games have changed significantly"
+    @updateUserPeriods
+      error: options.error
+      success: options.success
+
+
+  updateUserPeriods: (options) ->
+    @period.fetchUserPeriods
+      error: options.error
+      success: (userPeriods) ->
+        count = userPeriods.length
+        options.success() unless count
+        errorCalled = false
+        for userPeriod in userPeriods
+          do (userPeriod) ->
+            job = new UserPeriodUpdateJob {userPeriodId: userPeriod.id}
+            job.save
+              success: -> options.success() unless --count
+              error: (model,response) ->
+                unless errorCalled
+                  errorCalled = true
+                  options.error model,response
 
 
   fetchOrCreatePeriod: (options) ->

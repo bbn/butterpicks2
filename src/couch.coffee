@@ -15,10 +15,10 @@ couch.designDocs =
     views:
       byUserId:
         map: "function (doc) { if (doc.doctype=='ButterTransaction') emit([doc.userId, doc.createdDate], doc.amount); }"
-        reduce: "function (keys,values,rereduce) { return sum(values); }"
+        reduce: "_sum"
       byDate:
         map: "function (doc) { if (doc.doctype=='ButterTransaction') emit(doc.createdDate, doc.amount); }"
-        reduce: "function (keys,values,rereduce) { return sum(values); }"
+        reduce: "_sum"
   games:
     views:
       mostRecentlyUpdated:
@@ -29,6 +29,10 @@ couch.designDocs =
     views:
       byLeagueCategoryAndDates:
         map: "function (doc) { if (doc.doctype=='Period') emit([doc.league.statsKey,doc.category,doc.startDate,doc.endDate],null); }"
+  userPeriods:
+    views:
+      byPeriodIdAndPoints:
+        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.period.id,doc.points],null); }"
   jobs:
     views:
       byType:

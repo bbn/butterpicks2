@@ -7,7 +7,7 @@ models = require "../lib/models"
 
 User = models.User
 
-#TODO test createdAt default. loading existing model does not replace with default?
+console.log "TODO test createdAt default. loading existing model does not replace with default?"
 
 
 
