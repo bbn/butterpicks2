@@ -173,6 +173,13 @@ UserPeriod.fetchForPeriod = (params,options) ->
     success: (p,response) ->
       p.fetchUserPeriods options
 
-UserPeriod.fetchForUser = (params,options) ->
-  console.log "need a new view for this one."
-  options.error()
+UserPeriod.fetchForUserAndLeague = (params,options) ->
+  viewParams =
+    startkey: [params.userId, params.leagueStatsKey, (new Date(1970,1,1)).toJSON()]
+    endkey:   [params.userId, params.leagueStatsKey, (new Date(2070,1,1)).toJSON()]
+    include_docs: true
+  couch.db.view "userPeriods","byUserIdAndLeagueAndDate", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows
+    userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
+    options.success userPeriods

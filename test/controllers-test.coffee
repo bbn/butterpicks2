@@ -203,21 +203,54 @@ exports.testUserPeriodGetController =
             test.ok response.body.data
             userPeriodData = response.body.data
             test.equal userPeriodData.length, 1
-            # userPeriodData = userPeriodData[0]
-            # test.equal userPeriodData.userId, @user.id
-            # test.equal userPeriodData.leagueStatsKey, @period.get("league").statsKey
-            # test.equal userPeriodData.periodCategory, @period.get("category")
-            # test.equal userPeriodData.periodStartDate, @period.get("startDate").toJSON()
-            # userPeriod.destroy
-            #   error: logErrorResponse "userPeriod.destroy"
-            #   success: -> test.done()
-            test.done()
+            userPeriodData = userPeriodData[0]
+            test.equal userPeriodData.userId, @user.id
+            test.equal userPeriodData.leagueStatsKey, @period.get("league").statsKey
+            test.equal userPeriodData.periodCategory, @period.get("category")
+            test.equal userPeriodData.periodStartDate, @period.get("startDate").toJSON()
+            user2 = new User()
+            user2.save user2.toJSON(),
+              error: logErrorResponse "user2.save"
+              success: (user2,response) =>
+                UserPeriod.createForUserAndPeriod {userId:user2.id,periodId:@period.id},
+                  error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                  success: (userPeriod2,response) =>
+                    x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
+                    x.on "success", (response) =>
+                      test.ok response
+                      test.ok response.body.data
+                      userPeriodData = response.body.data
+                      test.equal userPeriodData.length, 2
+                      userPeriod.destroy
+                        error: logErrorResponse "userPeriod.destroy"
+                        success: -> 
+                          userPeriod2.destroy
+                            error: logErrorResponse "userPeriod2.destroy"
+                            success: ->
+                              user2.destroy
+                                error: logErrorResponse "user2.destroy"
+                                success: -> test.done()
 
+            
 
 
 
   testUserPeriodGetControllerOnlyUserId: (test) ->
-    x = mock.get "/user-period?userId=#{@user.id}", { accept:"application/json" }
+    x = mock.get "/user-period?userId=#{@user.id}&leagueStatsKey=#{@period.get('league').statsKey}", { accept:"application/json" }
     x.on "success", (response) =>
-      test.ok false, "implement testUserPeriodGetController only userId"
-      test.done()
+      test.ok response
+      test.ok response.body.data
+      userPeriodData = response.body.data
+      test.equal userPeriodData.length, 0
+      UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
+        error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+        success: (userPeriod,response) =>
+          x = mock.get "/user-period?userId=#{@user.id}&leagueStatsKey=#{@period.get('league').statsKey}", { accept:"application/json" }
+          x.on "success", (response) =>
+            test.ok response
+            test.ok response.body.data
+            userPeriodData = response.body.data
+            test.equal userPeriodData.length, 1
+            userPeriod.destroy
+              error: logErrorResponse "userPeriod.destroy"
+              success: -> test.done()

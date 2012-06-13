@@ -86,13 +86,13 @@ exports.router.map ->
 
 
   @get("/user-period").bind (req,res,params) ->
-    return res.send 400,{},{error:"need either or both userId and periodId param"} unless params.userId or params.periodId
+    return res.send 400,{},{error:"invalid params"} unless (params.userId and params.leagueStatsKey) or params.periodId
     if params.userId and params.periodId
       f = UserPeriod.fetchForUserAndPeriod
     else if params.periodId
       f = UserPeriod.fetchForPeriod
-    else if params.userId
-      f = UserPeriod.fetchForUser
+    else if params.userId and params.leagueStatsKey
+      f = UserPeriod.fetchForUserAndLeague
     f params,
       error: (_,response) -> res.send response.status_code,{},response
       success: (data,response) -> 
