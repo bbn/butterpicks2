@@ -2,8 +2,10 @@ util = require "util"
 
 couch = require "./couch"
 models = require "./models"
+User = models.User
 Game = models.Game
 Period = models.Period
+UserPeriod = models.UserPeriod
 
 workers = require "./workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -98,7 +100,7 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
   basePeriodId = game.basePeriodId()
   basePeriod = new Period({ id:periodId })
   p.fetch
-    success: (p,response) -> options.success p,response #TODO can I just say options.success?
+    success: options.success
     error: (p,response) -> 
       console.log "FIXME confirm that error comes from absent model: #{util.inspect response}"
       console.log "+++ creating #{p.id}"
@@ -139,3 +141,38 @@ Period::fetchUserPeriods = (options) ->
     return options.success([],headers) unless body.rows
     userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
     options.success userPeriods
+
+
+UserPeriod.getCouchId = (params) ->
+  "#{params.userId}_#{params.periodId}"
+
+UserPeriod.fetchForUserAndPeriod = (params,options) ->
+  userPeriodId = UserPeriod.getCouchId params
+  userPeriod = new UserPeriod { id: userPeriodId }
+  userPeriod.fetch options
+
+UserPeriod.createForUserAndPeriod = (params,options) ->
+  userPeriodId = UserPeriod.getCouchId params
+  p = new Period { id: params.periodId }
+  p.fetch
+    error: options.error
+    success: (p,response) ->      
+      userPeriod = new UserPeriod
+        id: userPeriodId
+        periodId: p.id
+        leagueStatsKey: p.get("league").statsKey
+        periodStartDate: p.get("startDate")
+        periodCategory: p.get("category")
+        userId: params.userId
+      userPeriod.save userPeriod.toJSON(), options
+
+UserPeriod.fetchForPeriod = (params,options) ->
+  p = new Period { id:params.periodId }
+  p.fetch
+    error: options.error
+    success: (p,response) ->
+      p.fetchUserPeriods options
+
+UserPeriod.fetchForUser = (params,options) ->
+  console.log "need a new view for this one."
+  options.error()

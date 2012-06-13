@@ -32,7 +32,9 @@ couch.designDocs =
   userPeriods:
     views:
       byPeriodIdAndPoints:
-        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.period.id,doc.points],null); }"
+        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.periodId,doc.points],null); }"
+      byUserIdAndLeagueAndDate:
+        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.userId,doc.leagueStatsKey,doc.periodStartDate],null); }"
   jobs:
     views:
       byType:

@@ -12,6 +12,8 @@ Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 
 Period = models.Period
+User = models.User
+UserPeriod = models.UserPeriod
 Game = models.Game
 
 require "../lib/date"
@@ -58,16 +60,18 @@ exports.testGetDailyPeriod =
       test.ok response, "response is ok"
       test.equal response.body.error,null,"error should be null: #{util.inspect response.body.error}"
       test.equal response.status, 200, "status should be 200"
-      test.equal response.body.id, @periodData.id
-      test.ok response.body.league
-      test.equal response.body.league.statsKey,@periodData.league.statsKey
-      test.equal response.body.category,@periodData.category
-      test.equal response.body.startDate, @periodData.startDate.toJSON()
-      test.equal response.body.endDate, @periodData.endDate.toJSON()
+      test.ok response.body.data
+      periodData = response.body.data
+      test.equal periodData.id, @periodData.id
+      test.ok periodData.league
+      test.equal periodData.league.statsKey,@periodData.league.statsKey
+      test.equal periodData.category,@periodData.category
+      test.equal periodData.startDate, @periodData.startDate.toJSON()
+      test.equal periodData.endDate, @periodData.endDate.toJSON()
       test.done()
 
 
-exports.testFetchGames = 
+exports.testFetchAssociatedModels = 
 
   setUp: (callback) ->
     @periodData = 
@@ -137,5 +141,47 @@ exports.testFetchGames =
                                 test.done()
 
   testFetchUserPeriods: (test) ->
-    test.ok false, "implement testFetchUserPeriods"
-    test.done()
+    test.ok @period
+    @period.fetchUserPeriods
+      error: logErrorResponse
+      success: (userPeriods,response) =>
+        test.equal userPeriods.length,0
+        user = new User()
+        user.save user.toJSON(),
+          error: logErrorResponse
+          success: (user,response) =>
+            UserPeriod.createForUserAndPeriod {userId:user.id,periodId:@period.id},
+              error: logErrorResponse
+              success: (userPeriod,response) =>
+                test.ok userPeriod
+                test.ok userPeriod.id
+                test.equal userPeriod.get("periodId"), @period.id
+                @period.fetchUserPeriods
+                  error: logErrorResponse
+                  success: (userPeriods,response) =>
+                    test.equal userPeriods.length, 1
+                    test.equal userPeriods[0].get("id"),userPeriod.id
+                    user2 = new User()
+                    user2.save user2.toJSON(),
+                      error: logErrorResponse
+                      success: (user2,response) =>
+                        UserPeriod.createForUserAndPeriod {userId:user2.id,periodId:@period.id},
+                          error: logErrorResponse
+                          success: (userPeriod2,response) =>
+                            test.ok userPeriod2
+                            @period.fetchUserPeriods
+                              error: logErrorResponse
+                              success: (userPeriods,response) =>
+                                test.equal userPeriods.length, 2
+                                userPeriod.destroy
+                                  error: logErrorResponse
+                                  success: =>
+                                    userPeriod2.destroy
+                                      error: logErrorResponse
+                                      success: =>
+                                        user.destroy
+                                          error: logErrorResponse
+                                          success: => 
+                                            user2.destroy
+                                              error: logErrorResponse
+                                              success: => test.done()

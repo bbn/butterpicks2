@@ -100,27 +100,29 @@ exports.testGamePost = (test) ->
   x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
   x.on 'success', (response) ->
     test.equal response.status,201
-    test.equal response.body.doctype,"Game"
-    test.equal response.body.statsKey,data.statsKey
-    test.equal response.body.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
-    test.equal response.body.league.abbreviation,data.league
-    test.equal response.body.league.statsKey,data.leagueStatsKey
-    test.equal response.body.awayTeam.statsKey,data.away_team.key
-    test.equal response.body.awayTeam.location,data.away_team.location
-    test.equal response.body.awayTeam.name,data.away_team.name
-    test.equal response.body.homeTeam.statsKey,data.home_team.key
-    test.equal response.body.homeTeam.location,data.home_team.location
-    test.equal response.body.homeTeam.name,data.home_team.name
-    test.equal response.body.startDate,(new Date(data.starts_at*1000)).toJSON()
-    test.equal response.body.status.score.away,data.away_score
-    test.equal response.body.status.score.home,data.home_score
-    test.equal response.body.status.text,data.status
-    test.equal response.body.status.final,data.final
-    test.equal response.body.legit,data.legit
-    test.equal response.body.pickCount.home,null
-    test.equal response.body.pickCount.away,null
-    test.equal response.body.pickCount.draw,null
-    test.ok response.body.id
+    test.ok response.body.data
+    gameData = response.body.data
+    test.equal gameData.doctype,"Game"
+    test.equal gameData.statsKey,data.statsKey
+    test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+    test.equal gameData.league.abbreviation,data.league
+    test.equal gameData.league.statsKey,data.leagueStatsKey
+    test.equal gameData.awayTeam.statsKey,data.away_team.key
+    test.equal gameData.awayTeam.location,data.away_team.location
+    test.equal gameData.awayTeam.name,data.away_team.name
+    test.equal gameData.homeTeam.statsKey,data.home_team.key
+    test.equal gameData.homeTeam.location,data.home_team.location
+    test.equal gameData.homeTeam.name,data.home_team.name
+    test.equal gameData.startDate,(new Date(data.starts_at*1000)).toJSON()
+    test.equal gameData.status.score.away,data.away_score
+    test.equal gameData.status.score.home,data.home_score
+    test.equal gameData.status.text,data.status
+    test.equal gameData.status.final,data.final
+    test.equal gameData.legit,data.legit
+    test.equal gameData.pickCount.home,null
+    test.equal gameData.pickCount.away,null
+    test.equal gameData.pickCount.draw,null
+    test.ok gameData.id
     PeriodUpdateJob.getNext
       limit: 2
       error: logErrorResponse
@@ -132,7 +134,7 @@ exports.testGamePost = (test) ->
         jobs[0].destroy
           error: logErrorResponse
           success: ->
-            g = new Game({id:response.body.id})
+            g = new Game({id:gameData.id})
             g.fetch
               error: logErrorResponse
               success: (model,response) ->
@@ -211,28 +213,30 @@ exports.testGamePostUpdate =
     x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
     x.on 'success', (response) =>
       test.equal response.status,201
-      test.equal response.body.doctype,"Game"
-      test.equal response.body.statsKey,data.statsKey
-      test.equal response.body.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
-      test.equal response.body.league.abbreviation,data.league
-      test.equal response.body.league.statsKey,data.leagueStatsKey
-      test.equal response.body.awayTeam.statsKey,data.away_team.key
-      test.equal response.body.awayTeam.location,data.away_team.location
-      test.equal response.body.awayTeam.name,data.away_team.name
-      test.equal response.body.homeTeam.statsKey,data.home_team.key
-      test.equal response.body.homeTeam.location,data.home_team.location
-      test.equal response.body.homeTeam.name,data.home_team.name
-      test.equal response.body.startDate,(new Date(data.starts_at*1000)).toJSON()
-      test.equal response.body.status.score.away,data.away_score
-      test.equal response.body.status.score.home,data.home_score
-      test.equal response.body.status.text,data.status
-      test.equal response.body.status.final,data.final
-      test.equal response.body.legit,data.legit
-      test.equal response.body.pickCount.home,@gameData.pickCount.home
-      test.equal response.body.pickCount.away,@gameData.pickCount.away
-      test.equal response.body.pickCount.draw,@gameData.pickCount.draw
-      test.ok response.body.id
-      test.ok response.body.basePeriodKey 
+      test.ok response.body.data
+      gameData = response.body.data
+      test.equal gameData.doctype,"Game"
+      test.equal gameData.statsKey,data.statsKey
+      test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+      test.equal gameData.league.abbreviation,data.league
+      test.equal gameData.league.statsKey,data.leagueStatsKey
+      test.equal gameData.awayTeam.statsKey,data.away_team.key
+      test.equal gameData.awayTeam.location,data.away_team.location
+      test.equal gameData.awayTeam.name,data.away_team.name
+      test.equal gameData.homeTeam.statsKey,data.home_team.key
+      test.equal gameData.homeTeam.location,data.home_team.location
+      test.equal gameData.homeTeam.name,data.home_team.name
+      test.equal gameData.startDate,(new Date(data.starts_at*1000)).toJSON()
+      test.equal gameData.status.score.away,data.away_score
+      test.equal gameData.status.score.home,data.home_score
+      test.equal gameData.status.text,data.status
+      test.equal gameData.status.final,data.final
+      test.equal gameData.legit,data.legit
+      test.equal gameData.pickCount.home,@gameData.pickCount.home
+      test.equal gameData.pickCount.away,@gameData.pickCount.away
+      test.equal gameData.pickCount.draw,@gameData.pickCount.draw
+      test.ok gameData.id
+      test.ok gameData.basePeriodKey 
       PeriodUpdateJob.getNext
         limit: 2
         error: logErrorResponse
