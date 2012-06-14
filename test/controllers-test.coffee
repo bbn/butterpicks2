@@ -215,21 +215,35 @@ exports.testUserPeriodGetController =
                 UserPeriod.createForUserAndPeriod {userId:user2.id,periodId:@period.id},
                   error: logErrorResponse "UserPeriod.createForUserAndPeriod"
                   success: (userPeriod2,response) =>
-                    x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
-                    x.on "success", (response) =>
-                      test.ok response
-                      test.ok response.body.data
-                      userPeriodData = response.body.data
-                      test.equal userPeriodData.length, 2
-                      userPeriod.destroy
-                        error: logErrorResponse "userPeriod.destroy"
-                        success: -> 
-                          userPeriod2.destroy
-                            error: logErrorResponse "userPeriod2.destroy"
-                            success: ->
-                              user2.destroy
-                                error: logErrorResponse "user2.destroy"
-                                success: -> test.done()
+                    test.equal userPeriod2.get("points"),0
+                    userPeriod2.save {points:1}, 
+                      error: logErrorResponse "userPeriod2.save"
+                      success: (userPeriod2,response) =>
+                        x = mock.get "/user-period?periodId=#{@period.id}&descending=true", { accept:"application/json" }
+                        x.on "success", (response) =>
+                          test.ok response
+                          test.ok response.body.data
+                          userPeriodData = response.body.data
+                          test.equal userPeriodData.length, 2
+                          test.equal userPeriodData[0].points,1
+                          test.equal userPeriodData[1].points,0
+                          x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
+                          x.on "success", (response) =>
+                            test.ok response
+                            test.ok response.body.data
+                            userPeriodData = response.body.data
+                            test.equal userPeriodData.length, 2
+                            test.equal userPeriodData[0].points,0
+                            test.equal userPeriodData[1].points,1
+                            userPeriod.destroy
+                              error: logErrorResponse "userPeriod.destroy"
+                              success: -> 
+                                userPeriod2.destroy
+                                  error: logErrorResponse "userPeriod2.destroy"
+                                  success: ->
+                                    user2.destroy
+                                      error: logErrorResponse "user2.destroy"
+                                      success: -> test.done()
 
             
 

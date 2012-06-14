@@ -133,8 +133,9 @@ Period::fetchGames = (options) ->
 
 Period::fetchUserPeriods = (options) ->
   viewParams =
-    startkey: [@.id, -99999999999]
-    endkey:   [@.id,  99999999999]
+    descending: true
+    startkey: [@.id, 99999999999]
+    endkey:   [@.id, -99999999999]
     include_docs: true
   couch.db.view "userPeriods","byPeriodIdAndPoints", viewParams, (err,body,headers) ->
     return options.error(null,err) if err
@@ -167,11 +168,18 @@ UserPeriod.createForUserAndPeriod = (params,options) ->
       userPeriod.save userPeriod.toJSON(), options
 
 UserPeriod.fetchForPeriod = (params,options) ->
-  p = new Period { id:params.periodId }
-  p.fetch
-    error: options.error
-    success: (p,response) ->
-      p.fetchUserPeriods options
+  high = [params.periodId, 999999999999]
+  low = [params.periodId, -999999999999]
+  viewParams =
+    descending: (if params.descending then true else false)
+    startkey: (if params.descending then high else low)
+    endkey:   (if params.descending then low else high)
+    include_docs: true
+  couch.db.view "userPeriods","byPeriodIdAndPoints", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows
+    userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
+    options.success userPeriods
 
 UserPeriod.fetchForUserAndLeague = (params,options) ->
   viewParams =
