@@ -323,7 +323,8 @@ exports.testPickPost =
     @user.save @user.toJSON(),
       error: logErrorResponse "user save"
       success: (u,response) =>
-        @game = new Game()
+        @game = new Game
+          startDate: (new Date()).add({days:7})
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -374,7 +375,103 @@ exports.testPickPost =
             test.equal pick.get("home"), true
             test.equal pick.get("away"), false
             test.equal pick.get("draw"), false
-            test.equal pick.get("butter"), false    
-            pick.destroy
-              error: logErrorResponse "pick.destroy"
-              success: (pick,response) -> test.done()
+            test.equal pick.get("butter"), false 
+            x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+            x.on "success", (response) =>
+              test.ok response, "response is ok"
+              test.equal response.status, 409, "model should already exist"
+              pick.destroy
+                error: logErrorResponse "pick.destroy"
+                success: (pick,response) -> test.done()
+
+
+exports.testPickPostForExpiredGame = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game
+          startDate: (new Date()).add({days:-7})
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: -> callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: -> callback()
+
+  testPickPost: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,404
+      pickData = 
+        userId: @user.id
+        gameId: @game.id
+        home: true
+        away: false
+        draw: false
+        butter: false
+      x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+      x.on "success", (response) =>
+        test.ok response, "response is ok"
+        test.equal response.status, 400, "status should be 400 - game has passed."
+        Pick.fetchForUserAndGame pickData,
+          success: -> console.log "this is unexpected."
+          error: (_,response) =>
+            test.equal response.status_code, 404
+            test.done()
+
+
+exports.testPickPostForInvalidParams = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game
+          startDate: (new Date()).add({days:7})
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: -> callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: -> callback()
+
+  testPickPost: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,404
+      pickData = 
+        userId: @user.id
+        gameId: @game.id
+        home: true
+        away: true #can't have both true!
+        draw: false
+        butter: false
+      x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+      x.on "success", (response) =>
+        test.ok response, "response is ok"
+        test.equal response.status, 400, "status should be 400 - invalid params."
+        Pick.fetchForUserAndGame pickData,
+          success: -> console.log "this is unexpected."
+          error: (_,response) =>
+            test.equal response.status_code, 404
+            test.done()

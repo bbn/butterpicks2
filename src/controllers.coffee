@@ -113,6 +113,22 @@ exports.router.map ->
 
   @post("/pick").bind (req,res,params) ->
     return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
-    Pick.create params,
+    game = new Game {id:params.gameId}
+    game.fetch
       error: (_,response) -> res.send response.status_code,{},response
-      success: (data,response) -> res.send data
+      success: (game,response) ->
+        return res.send(400,{},"deadlineHasPassed") if game.deadlineHasPassed()
+        pick = new Pick(params)
+        pick.game = game
+        return res.send(400,{},"not editable") unless pick.editable()
+        return res.send(400,{},"invalid") unless pick.isValid()
+        Pick.create params,
+          error: (_,response) -> res.send response.status_code,{},response
+          success: (data,response) -> res.send data
+
+  # @put("/pick").bind (req,res,params) ->
+  #   return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
+    
+  #   Pick.create params,
+  #     error: (_,response) -> res.send response.status_code,{},response
+  #     success: (data,response) -> res.send data
