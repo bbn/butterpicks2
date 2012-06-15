@@ -110,3 +110,9 @@ exports.router.map ->
         res.send 
           requestParams: params
           data: data
+
+  @post("/pick").bind (req,res,params) ->
+    return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
+    Pick.create params,
+      error: (_,response) -> res.send response.status_code,{},response
+      success: (data,response) -> res.send data

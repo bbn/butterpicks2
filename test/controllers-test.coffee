@@ -314,3 +314,67 @@ exports.testPickGet =
             pick.destroy
               error: logErrorResponse "pick.destroy"
               success: -> test.done()
+
+
+exports.testPickPost = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game()
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: -> callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: -> callback()
+
+  testPickPost: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,404
+      pickData = 
+        userId: @user.id
+        gameId: @game.id
+        home: true
+        away: false
+        draw: false
+        butter: false
+      x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+      x.on "success", (response) =>
+        test.ok response, "response is ok"
+        test.equal response.status, 201, "status should be 201. response: #{util.inspect response}"
+        test.ok response.body
+        data = response.body
+        test.ok data.id, "should return a new id"
+        test.equal data.id, Pick.getCouchId(pickData)
+        test.equal data.userId, @user.id
+        test.equal data.gameId, @game.id
+        test.equal data.home, true
+        test.equal data.away, false
+        test.equal data.draw, false
+        test.equal data.butter, false
+        Pick.fetchForUserAndGame pickData,
+          error: logErrorResponse "Pick.fetchForUserAndGame"
+          success: (pick,response) =>
+            test.ok pick
+            test.equal pick.id, Pick.getCouchId(pickData)
+            test.equal pick.get("userId"), @user.id
+            test.equal pick.get("gameId"), @game.id
+            test.equal pick.get("home"), true
+            test.equal pick.get("away"), false
+            test.equal pick.get("draw"), false
+            test.equal pick.get("butter"), false    
+            pick.destroy
+              error: logErrorResponse "pick.destroy"
+              success: (pick,response) -> test.done()
