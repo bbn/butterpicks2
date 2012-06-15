@@ -1,4 +1,5 @@
 util = require "util"
+require "../lib/date"
 
 journey = require "journey"
 controllers = require "../lib/controllers"
@@ -119,9 +120,9 @@ exports.testGamePost = (test) ->
     test.equal gameData.status.text,data.status
     test.equal gameData.status.final,data.final
     test.equal gameData.legit,data.legit
-    test.equal gameData.pickCount.home,null
-    test.equal gameData.pickCount.away,null
-    test.equal gameData.pickCount.draw,null
+    test.equal gameData.pickCount.home,0
+    test.equal gameData.pickCount.away,0
+    test.equal gameData.pickCount.draw,0
     test.ok gameData.id
     PeriodUpdateJob.getNext
       limit: 2
@@ -319,3 +320,50 @@ exports.couchViewForGamesByLeagueAndStartDate = (test) ->
                       error: logErrorResponse
                       success: -> test.done()
 
+
+exports.gameModelTest = (test) ->
+  now = new Date()
+  earlierDate = (new Date(now)).add {hours:-1}
+  g = new Game
+    startDate: earlierDate
+  test.ok (g.secondsUntilDeadline() + 60*60) <= 0
+  test.ok (g.secondsUntilDeadline() + (60*60+1)) > 0
+  test.equal g.deadlineHasPassed(), true
+  test.equal g.postponed(), false
+  test.equal g.homeWin(), null
+  test.equal g.awayWin(), null
+  test.equal g.draw(), null
+  g.set { status: { text: "postponed"}}
+  test.equal g.postponed(), true
+  g.set
+    status:
+      final: true
+      score:
+        home: 3
+        away: 1
+  test.equal g.postponed(),false
+  test.equal g.homeWin(),true
+  test.equal g.awayWin(),false
+  test.equal g.draw(),null
+  g.set
+    status:
+      final: true
+      score:
+        home: 3
+        away: 22
+  test.equal g.homeWin(),false
+  test.equal g.awayWin(),true
+  test.equal g.draw(),null
+  g.set
+    couldDraw: true
+  test.equal g.draw(),false
+  g.set
+    status:
+      final: true
+      score:
+        home: 1
+        away: 1
+  test.equal g.draw(),true
+  test.equal g.homeWin(),false
+  test.equal g.awayWin(),false
+  test.done()

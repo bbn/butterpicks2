@@ -25,25 +25,41 @@ module.exports = class Game extends Backbone.Model
         away: null
         home: null
       text: null #eg, "3rd period"
-      final: null
-    legit: null
+      final: false
+    couldDraw: false 
+    legit: true
     pickCount:
-      home: null
-      away: null
-      draw: null
+      home: 0
+      away: 0
+      draw: 0
     basePeriodKey: null
 
+
+  secondsUntilDeadline: ->
+    (@get("startDate") - new Date())/1000
+
+  deadlineHasPassed: -> 
+    @secondsUntilDeadline() < 0
 
   postponed: ->
     status = @get "status"
     return false unless status.text
-    return true if status.text.match /postponed/
+    return true if status.text.match(/postponed/) 
     return false
     
+  homeWin: ->
+    status = @get "status"
+    return null unless status.final
+    status.score.home > status.score.away
 
-  secondsUntilDeadline: ->
-    start = @get "startDate"
-    now = new Date()
-    return start - now
+  awayWin: ->
+    status = @get "status"
+    return null unless status.final
+    status.score.away > status.score.home
 
-      
+  draw: ->
+    return null unless @get("couldDraw")
+    status = @get "status"
+    return null unless status.final
+    status.score.away == status.score.home
+
