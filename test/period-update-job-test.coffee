@@ -8,9 +8,12 @@ models = require "../lib/models"
 require "../lib/model-server-utils"
 Period = models.Period
 Game = models.Game
+User = models.User
+UserPeriod = models.UserPeriod
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
+UserPeriodUpdateJob = workers.UserPeriodUpdateJob
 
 
 logErrorResponse = (message) ->
@@ -139,8 +142,31 @@ exports.periodUpdateJobWork =
     test.ok @period.id
     test.ok @periodUpdateJob
     test.ok @periodUpdateJob.id
+    UserPeriodUpdateJob.workSuspended = true
     @periodUpdateJob.work
       error: logErrorResponse "periodUpdateJob.work error"
       success: (model,response) =>
         test.equal model.id, @periodUpdateJob.id
-        test.done()
+        user = new User()
+        user.save user.toJSON(),
+          error: logErrorResponse "user.save"
+          success: (user,response) =>
+            UserPeriod.createForUserAndPeriod {userId:user.id,periodId:@period.id},
+              error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+              success: (user,response) =>
+                @periodUpdateJob.work
+                  error: logErrorResponse "periodUpdateJob.work 2 error"
+                  success: (model,response) =>
+                    test.equal model.id, @periodUpdateJob.id
+                    UserPeriodUpdateJob.getNext
+                      error: logErrorResponse "UserPeriodUpdateJob.getNext"
+                      success: (job,response) =>
+                        test.ok job
+                        job.destroy
+                          error: logErrorResponse "deleting UserPeriodUpdateJob"
+                          success: =>
+                            UserPeriodUpdateJob.getNext
+                              error: logErrorResponse "UserPeriodUpdateJob.getNext 2"
+                              success: (job,response) =>
+                                test.equal job,null,"all jobs deleted"
+                                test.done()

@@ -1,3 +1,4 @@
+Job = require "./job"
 _ = require "underscore"
 util = require "util"
 require "../../date"
@@ -6,17 +7,16 @@ couch = require "../../couch"
 models = require "../../models"
 Period = models.Period
 Game = models.Game
+UserPeriodUpdateJob = require "./user-period-update-job"
 
 
-module.exports = class PeriodUpdateJob extends Backbone.Model
-
-  @doctype: "PeriodUpdateJob"
+module.exports = class PeriodUpdateJob extends Job
 
   idAttribute: "_id"
 
   defaults:
     job: true
-    doctype: "PeriodUpdateJob" #FIXME how to refer to the class variable?
+    doctype: "PeriodUpdateJob"
     createdDate: new Date()
     periodId: null
     league:
@@ -66,7 +66,7 @@ module.exports = class PeriodUpdateJob extends Backbone.Model
         for userPeriod in userPeriods
           do (userPeriod) ->
             job = new UserPeriodUpdateJob {userPeriodId: userPeriod.id}
-            job.save
+            job.save job.toJSON(),
               success: -> options.success() unless --count
               error: (model,response) ->
                 unless errorCalled
@@ -75,7 +75,7 @@ module.exports = class PeriodUpdateJob extends Backbone.Model
 
 
   fetchOrCreatePeriod: (options) ->
-    period = new Period({ id: @get "periodId" })
+    period = new Period {id:@get("periodId")}
     period.fetch
       success: options.success
       error: (model,response) =>
@@ -98,57 +98,3 @@ module.exports = class PeriodUpdateJob extends Backbone.Model
           success: (model,response) =>
             options.success model,response
 
-
-
-  @create: (params,options) ->
-    j = new @
-    j.save params,
-      error: options.error
-      success: (job,response) =>
-        options.success job,response
-        @startWorking() unless @workSuspended
-
-  
-  @workSuspended: false
-
-  @workInProgress: false
-
-  @startWorking: ->
-    console.log "@startWorking"
-    @doWork() unless @workInProgress
-    
-  @doWork: ->
-    console.log "@doWork"
-    @workInProgress = true
-    @getNext
-      error: (model,response) => 
-        console.log "!!! fetching next job error: #{util.inspect response}"
-        @doWork()
-      success: (model,response) =>
-        return @stopWorking() unless model
-        model.work
-          error: (_,response) => 
-            console.log "!!! work error: #{util.inspect response}"
-            @doWork()
-          success: (model) =>
-            model.destroy
-              error: => 
-                console.log "!!! deleting job error: #{util.inspect response}"
-                @doWork()
-              success: => @doWork()
-
-  @stopWorking: ->
-    console.log "@stopWorking"
-    @workInProgress = false
-
-  @getNext: (options) ->
-    viewParams =
-      startkey: [@doctype,'1970-01-01T00:00:00.000Z']
-      endKey: [@doctype,'2070-01-01T00:00:00.000Z']
-      include_docs: true
-      limit: options.limit or 1
-    couch.db.view "jobs","byType", viewParams, (err,body,headers) =>
-      return options.error(null,err) if err
-      jobs = (new @(row.doc) for row in body.rows)
-      jobs = jobs[0] if viewParams.limit == 1
-      options.success jobs, headers
