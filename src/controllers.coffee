@@ -11,6 +11,7 @@ Game = models.Game
 Period = models.Period
 User = models.User
 UserPeriod = models.UserPeriod
+Pick = models.Pick
 
 journey = require "journey"
 exports.router = new journey.Router
@@ -94,6 +95,16 @@ exports.router.map ->
     else if params.userId and params.leagueStatsKey
       f = UserPeriod.fetchForUserAndLeague
     f params,
+      error: (_,response) -> res.send response.status_code,{},response
+      success: (data,response) -> 
+        res.send 
+          requestParams: params
+          data: data
+
+
+  @get("/pick").bind (req,res,params) ->
+    return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
+    Pick.fetchForUserAndGame params,
       error: (_,response) -> res.send response.status_code,{},response
       success: (data,response) -> 
         res.send 

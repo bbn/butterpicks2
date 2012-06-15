@@ -6,6 +6,7 @@ User = models.User
 Game = models.Game
 Period = models.Period
 UserPeriod = models.UserPeriod
+Pick = models.Pick
 
 workers = require "./workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -191,3 +192,21 @@ UserPeriod.fetchForUserAndLeague = (params,options) ->
     return options.success([],headers) unless body.rows
     userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
     options.success userPeriods
+
+
+Pick.getCouchId = (params) ->
+  return null unless params.userId and params.gameId
+  "#{params.userId}_#{params.gameId}"
+
+
+Pick.create = (params,options) ->
+  return options.error("userId, gameId params plz") unless params.gameId and params.userId
+  pick = new Pick(params)
+  pick.set { id:Pick.getCouchId params }
+  pick.save pick.toJSON(),options
+
+
+Pick.fetchForUserAndGame = (params,options) ->
+  pickId = Pick.getCouchId params
+  pick = new Pick { id: pickId }
+  pick.fetch options

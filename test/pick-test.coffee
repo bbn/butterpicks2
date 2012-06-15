@@ -11,10 +11,6 @@ Game = models.Game
 User = models.User
 Pick = models.Pick
 
-workers = require "../lib/workers"
-PeriodUpdateJob = workers.PeriodUpdateJob
-PeriodUpdateJob.workSuspended = true
-
 logErrorResponse = (message) ->
   return (model,response) ->
     console.log "ERROR: #{message} -> response: #{util.inspect response}"
@@ -227,3 +223,18 @@ exports.modelTests = (test) ->
   test.equal pick.points(),null
 
   test.done()
+
+
+exports.pickCreateTest = (test) ->
+  pickData =
+    gameId: "di1b7xfbqudgw"
+    userId: "dlquxknuhasjklndhalnsjh"
+  Pick.create pickData,
+    error: logErrorResponse "Pick.create"
+    success: (pick,response) ->
+      test.ok pick
+      test.equal pick.id, Pick.getCouchId(pickData)
+
+      pick.destroy
+        error: logErrorResponse "pick.destroy"
+        success: -> test.done()  

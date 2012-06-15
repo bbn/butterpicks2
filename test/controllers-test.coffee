@@ -13,6 +13,8 @@ models = require "../lib/models"
 User = models.User
 Period = models.Period
 UserPeriod = models.UserPeriod
+Game = models.Game
+Pick = models.Pick
 
 
 logErrorResponse = (message) ->
@@ -267,4 +269,48 @@ exports.testUserPeriodGetController =
             test.equal userPeriodData.length, 1
             userPeriod.destroy
               error: logErrorResponse "userPeriod.destroy"
+              success: -> test.done()
+
+
+
+exports.testPickGet = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game()
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: -> callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: -> callback()
+
+  testPickGet: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,404
+      Pick.create {gameId:@game.id,userId:@user.id},
+        error: logErrorResponse "pick.save"
+        success: (pick,response) =>
+          x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+          x.on "success", (response) =>
+            test.ok response
+            test.ok response.body.data
+            pickData = response.body.data
+            test.equal pickData.id, pick.id
+            test.equal pickData.userId, @user.id
+            test.equal pickData.gameId, @game.id
+            pick.destroy
+              error: logErrorResponse "pick.destroy"
               success: -> test.done()
