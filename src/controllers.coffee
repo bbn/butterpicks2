@@ -112,6 +112,7 @@ exports.router.map ->
           data: data
 
   @post("/pick").bind (req,res,params) ->
+    console.log "FIXME - doesn't take butters into account"
     return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
     game = new Game {id:params.gameId}
     game.fetch
@@ -126,9 +127,23 @@ exports.router.map ->
           error: (_,response) -> res.send response.status_code,{},response
           success: (data,response) -> res.send data
 
-  # @put("/pick").bind (req,res,params) ->
-  #   return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
-    
-  #   Pick.create params,
-  #     error: (_,response) -> res.send response.status_code,{},response
-  #     success: (data,response) -> res.send data
+  @put("/pick").bind (req,res,params) ->
+    console.log "FIXME - doesn't take butters into account"
+    return res.send 400,{},{error:"invalid params"} unless params.id
+    pick = new Pick {id:params.id}
+    pick.fetch
+      error: (_,response) -> res.send response.status_code,{},response
+      success: (pick,response) ->
+        game = new Game {id:pick.get("gameId")}
+        game.fetch
+          error: (_,response) -> res.send response.status_code,{},response
+          success: (game,response) ->
+            return res.send(400,{},"deadlineHasPassed") if game.deadlineHasPassed()
+            pick.game = game
+            return res.send(400,{},"not editable") unless pick.editable()
+            return res.send(400,{},"invalid params") unless pick.set params
+            pick.set { updatedDate: new Date() }
+            pick.save pick.toJSON(),
+              error: (_,response) -> res.send response.status_code,{},response
+              success: (pick,response) ->
+                res.send pick.toJSON()

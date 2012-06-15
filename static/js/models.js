@@ -3042,7 +3042,8 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
       home: null,
       away: null,
       draw: null,
-      butter: null
+      butter: null,
+      updatedDate: new Date()
     };
 
     Pick.prototype.user = null;

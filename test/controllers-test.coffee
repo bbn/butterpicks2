@@ -475,3 +475,80 @@ exports.testPickPostForInvalidParams =
           error: (_,response) =>
             test.equal response.status_code, 404
             test.done()
+
+
+exports.testPickPut = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game
+          startDate: (new Date()).add({days:7})
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: => 
+            Pick.create {userId:@user.id,gameId:@game.id},
+              error: logErrorResponse "Pick.create"
+              success: (pick,response) =>
+                @pick = pick
+                callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: => 
+            @pick.destroy
+              error: logErrorResponse "destroying pick"
+              callback()
+
+  testPickPut: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    test.ok @pick.id
+    pickData =
+      id: @pick.id
+      userId: @user.id
+      gameId: @game.id
+      home: true
+      away: false
+      draw: false
+      butter: false
+    x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,200
+      test.ok response.body
+      data = response.body
+      for key,val of pickData
+        test.equal data[key],val
+      pickData.home = false
+      pickData.away = true
+      x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+      x.on "success", (response) =>
+        test.ok response
+        test.equal response.status,200
+        test.ok response.body
+        for key,val of pickData
+          test.equal response.body[key],val
+        pickData.home = true
+        pickData.away = true
+        x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+        x.on "success", (response) =>
+          test.ok response
+          test.equal response.status,400, "invalid pick params"
+          @game.save {startDate: (new Date()).add({days:-7})},
+            error: logErrorResponse "resaving Game with earlier start"
+            success: (game,response) =>
+              pickData.away = false
+              pickData.home = true
+              pickData.draw = false
+              x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+              x.on "success", (response) =>
+                test.ok response
+                test.equal response.status,400,"game should be too early"
+                test.done()
