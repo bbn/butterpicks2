@@ -7,9 +7,35 @@ Game = models.Game
 Period = models.Period
 UserPeriod = models.UserPeriod
 Pick = models.Pick
+ButterTransaction = models.ButterTransaction
 
 workers = require "./workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
+
+
+
+User::getButters = (options) ->
+  viewParams =
+    group_level: 1
+    startkey: [@.id,'1970-01-01T00:00:00.000Z']
+    endkey: [@.id,'2070-01-01T00:00:00.000Z']
+  couch.db.view "butters","byUserId", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    value = if body.rows.length then body.rows[0].value else null
+    options.success value
+
+
+User::fetchButterTransactions = (options) ->
+  viewParams =
+    reduce: false
+    startkey: [@.id,'1970-01-01T00:00:00.000Z']
+    endkey: [@.id,'2070-01-01T00:00:00.000Z']
+    include_docs: true
+  couch.db.view "butters","byUserId", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows
+    trannies = ((new ButterTransaction(row.doc)) for row in body.rows)
+    options.success trannies
 
 
 Game::getCouchId = ->
@@ -202,7 +228,11 @@ Pick.getCouchId = (params) ->
 Pick.create = (params,options) ->
   return options.error("userId, gameId params plz") unless params.gameId and params.userId
   pick = new Pick(params)
-  pick.set { id:Pick.getCouchId params }
+  d = new Date()
+  pick.set 
+    id:Pick.getCouchId params
+    createdDate: d
+    updatedDate: d
   pick.save pick.toJSON(),options
 
 

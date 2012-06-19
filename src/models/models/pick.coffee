@@ -12,8 +12,9 @@ module.exports = class Pick extends Backbone.Model
     draw: null
     butter: null
 
-    updatedDate: new Date()
-    
+    createdDate: null
+    updatedDate: null
+
   user: null
   game: null
 

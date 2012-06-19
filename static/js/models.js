@@ -360,6 +360,8 @@ require.define("/models/butter-transaction.js", function (require, module, expor
       ButterTransaction.__super__.constructor.apply(this, arguments);
     }
 
+    ButterTransaction.prototype.idAttribute = "_id";
+
     ButterTransaction.prototype.defaults = {
       doctype: "ButterTransaction",
       userId: null,
@@ -3043,7 +3045,8 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
       away: null,
       draw: null,
       butter: null,
-      updatedDate: new Date()
+      createdDate: null,
+      updatedDate: null
     };
 
     Pick.prototype.user = null;

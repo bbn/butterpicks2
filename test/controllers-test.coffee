@@ -11,6 +11,7 @@ Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 
 User = models.User
+ButterTransaction = models.ButterTransaction
 Period = models.Period
 UserPeriod = models.UserPeriod
 Game = models.Game
@@ -406,7 +407,7 @@ exports.testPickPostForExpiredGame =
           error: logErrorResponse "destroying game"
           success: -> callback()
 
-  testPickPost: (test) ->
+  testPickPostForExpiredGame: (test) ->
     test.ok @user.id
     test.ok @game.id
     x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
@@ -452,7 +453,7 @@ exports.testPickPostForInvalidParams =
           error: logErrorResponse "destroying game"
           success: -> callback()
 
-  testPickPost: (test) ->
+  testPickPostForInvalidParams: (test) ->
     test.ok @user.id
     test.ok @game.id
     x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
@@ -475,6 +476,98 @@ exports.testPickPostForInvalidParams =
           error: (_,response) =>
             test.equal response.status_code, 404
             test.done()
+
+
+exports.testPickPostWithNoButters = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game
+          startDate: (new Date()).add({days:7})
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: -> callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: -> callback()
+
+  testPickPostWithNoButter: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
+    x.on "success", (response) =>
+      test.ok response
+      test.equal response.status,404
+      pickData = 
+        userId: @user.id
+        gameId: @game.id
+        home: false
+        away: false
+        draw: false
+        butter: true
+      x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+      x.on "success", (response) =>
+        test.ok response, "response is ok"
+        test.equal response.status, 400, "status should be 400 - no butter."
+        Pick.fetchForUserAndGame pickData,
+          success: -> logErrorResponse "Pick.fetchForUserAndGame"
+          error: (_,response) =>
+            test.equal response.status_code, 404
+            tr = new ButterTransaction
+              userId: @user.id
+              amount: 100
+              createdDate: new Date()
+            tr.save tr.toJSON(),
+              error: (model,response) -> console.log "couldn't create ButterTransaction?"
+              success: (butterTransaction,response) => 
+                @user.getButters
+                  error: logErrorResponse "@user.getButters"
+                  success: (butters) =>
+                    test.equal butters,100
+                    x = mock.post "/pick", { accept: "application/json" }, JSON.stringify pickData
+                    x.on "success", (response) =>
+                      test.ok response, "response is ok"
+                      test.equal response.status, 201, "status should be 201. response: #{util.inspect response}"
+                      test.ok response.body
+                      data = response.body
+                      test.ok data.id, "should return a new id"
+                      test.equal data.id, Pick.getCouchId(pickData)
+                      test.equal data.userId, @user.id
+                      test.equal data.gameId, @game.id
+                      test.equal data.home, false
+                      test.equal data.away, false
+                      test.equal data.draw, false
+                      test.equal data.butter, true
+                      @user.getButters
+                        error: logErrorResponse "@user.getButters 2"
+                        success: (butters) =>
+                          test.equal butters,99
+                          Pick.fetchForUserAndGame pickData,
+                            error: logErrorResponse "Pick.fetchForUserAndGame"
+                            success: (pick,response) =>
+                              test.ok pick
+                              pick.destroy
+                                error: logErrorResponse "pick.destroy"
+                                success: =>
+                                  @user.fetchButterTransactions
+                                    error: logErrorResponse "@user.fetchButterTransactions"
+                                    success: (trannies) =>
+                                      test.equal trannies.length,2
+                                      trannies[0].destroy
+                                        error: logErrorResponse "trannies[0].destroy"
+                                        success: => 
+                                          trannies[1].destroy
+                                            error: logErrorResponse "trannies[1].destroy"
+                                            success: => 
+                                              test.done()
 
 
 exports.testPickPut = 

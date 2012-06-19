@@ -48,8 +48,7 @@ exports.testButters =
     x.on 'success', (response) =>
       test.ok response
       test.equal response.status, 200 
-      test.equal response.body.requestParams.userId,@userModel.id, "same user id"
-      test.equal response.body.butters,null, "should have null butters"
+      test.equal response.body,null, "should have null butters"
       tr1 = new ButterTransaction
         userId: @userModel.id
         amount: 1
@@ -62,8 +61,7 @@ exports.testButters =
           y = mock.get "/butters?userId=#{@userModel.id}", { accept: "application/json" }
           y.on 'success', (response) =>
             test.equal response.status, 200 
-            test.equal response.body.requestParams.userId,@userModel.id, "same user id"
-            test.equal response.body.butters,1, "should have 1 butter. #{util.inspect response.body.butters}"
+            test.equal response.body,1, "should have 1 butter. #{util.inspect response.body.butters}"
             tr2 = new ButterTransaction
               userId: @userModel.id
               amount: 100
@@ -76,8 +74,7 @@ exports.testButters =
                 z = mock.get "/butters?userId=#{@userModel.id}", { accept: "application/json" }
                 z.on 'success', (response) =>
                   test.equal response.status, 200 
-                  test.equal response.body.requestParams.userId,@userModel.id, "same user id"
-                  test.equal response.body.butters,101, "should have 101 butters"
+                  test.equal response.body,101, "should have 101 butters"
                   tr3 = new ButterTransaction
                     userId: @userModel.id
                     pickId: "5127ghjkh12983812" #TODO eventually put in real pick here
@@ -91,8 +88,7 @@ exports.testButters =
                       w = mock.get "/butters?userId=#{@userModel.id}", { accept: "application/json" }
                       w.on 'success', (response) =>
                         test.equal response.status, 200 
-                        test.equal response.body.requestParams.userId,@userModel.id, "same user id"
-                        test.equal response.body.butters,100, "should have 100 butters"
+                        test.equal response.body,100, "should have 100 butters"
                         tr1.destroy
                           error: (model,response) -> console.log util.inspect response
                           success: =>
@@ -113,8 +109,7 @@ exports.testButters =
       x = mock.get "/butters?userId=#{missingId}", { accept: "application/json" }
       x.on 'success', (response) ->
         test.equal response.status,200
-        test.equal response.body.requestParams.userId,missingId
-        test.equal response.body.butters,null
+        test.equal response.body,null
         test.done()
 
 

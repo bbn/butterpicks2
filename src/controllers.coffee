@@ -12,6 +12,7 @@ Period = models.Period
 User = models.User
 UserPeriod = models.UserPeriod
 Pick = models.Pick
+ButterTransaction = models.ButterTransaction
 
 journey = require "journey"
 exports.router = new journey.Router
@@ -52,16 +53,11 @@ exports.router.map ->
 
   @get("/butters").bind (req,res,params) ->
     return res.send 400,{},{error:"no userId param"} unless params.userId
-    viewParams =
-      group_level: 1
-      startkey: [params.userId,'1970-01-01T00:00:00.000Z']
-      endkey: [params.userId,'2070-01-01T00:00:00.000Z']
-    couch.db.view "butters","byUserId", viewParams, (err,body,headers) ->
-      return res.send err.status_code,{},err if err
-      value = if body.rows.length then body.rows[0].value else null
-      res.send 
-        requestParams: params
-        butters: value
+    u = new User {id:params.userId}
+    u.getButters
+      error: (_,err) -> res.send err.status_code,{},err
+      success: (value) -> 
+        res.send 200,{},value
 
 
   @post("/game").bind (req,res,params) ->
@@ -112,20 +108,52 @@ exports.router.map ->
           data: data
 
   @post("/pick").bind (req,res,params) ->
-    console.log "FIXME - doesn't take butters into account"
     return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
+    user = new User {id:params.userId}
+    user.getButters
+      error: (_,response) -> sendError response
+      success: (butters) -> 
+        user.butters = butters
+        testUserAndGame user,null
     game = new Game {id:params.gameId}
     game.fetch
-      error: (_,response) -> res.send response.status_code,{},response
-      success: (game,response) ->
-        return res.send(400,{},"deadlineHasPassed") if game.deadlineHasPassed()
-        pick = new Pick(params)
-        pick.game = game
-        return res.send(400,{},"not editable") unless pick.editable()
-        return res.send(400,{},"invalid") unless pick.isValid()
-        Pick.create params,
-          error: (_,response) -> res.send response.status_code,{},response
-          success: (data,response) -> res.send data
+      error: (_,response) -> sendError response
+      success: (game,response) -> testUserAndGame null,game
+
+    errorSent = false
+    sendError = (couchResponse) ->
+      return if errorSent
+      errorSent = true
+      res.send couchResponse.status_code,{},couchResponse
+
+    @game = null
+    @user = null
+    testUserAndGame = (user,game) =>
+      @game = game if game
+      @user = user if user
+      return unless @game and @user
+      return res.send(400,{},"deadlineHasPassed") if @game.deadlineHasPassed()
+      pick = new Pick(params)
+      pick.game = @game
+      return res.send(400,{},"not editable") unless pick.editable()
+      return res.send(400,{},"invalid") unless pick.isValid()
+      return res.send(400,{},"insufficient butter") if params.butter and (@user.butters <= 0)
+      Pick.create params,
+        error: (_,response) -> sendError response
+        success: (pick,response) => 
+          return res.send(pick) unless pick.get "butter"
+          tr = new ButterTransaction
+            userId: @user.id
+            pickId: pick.id
+            amount: -1
+            createdDate: pick.get "createdDate"
+          tr.save tr.toJSON(),
+            error: (model,response) -> sendError response
+            success: (model,response) -> res.send(pick)
+
+
+
+
 
   @put("/pick").bind (req,res,params) ->
     console.log "FIXME - doesn't take butters into account"

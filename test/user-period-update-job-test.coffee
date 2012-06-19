@@ -112,7 +112,6 @@ exports.userPeriodUpdateJobQueries =
                   success: => test.done()
 
 
-
 exports.userPeriodUpdateJobWorkDeletedPeriod = 
 
   setUp: (callback) ->
