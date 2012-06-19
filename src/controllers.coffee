@@ -153,10 +153,7 @@ exports.router.map ->
 
 
 
-
-
   @put("/pick").bind (req,res,params) ->
-    console.log "FIXME - doesn't take butters into account"
     return res.send 400,{},{error:"invalid params"} unless params.id
     pick = new Pick {id:params.id}
     pick.fetch
@@ -169,9 +166,25 @@ exports.router.map ->
             return res.send(400,{},"deadlineHasPassed") if game.deadlineHasPassed()
             pick.game = game
             return res.send(400,{},"not editable") unless pick.editable()
-            return res.send(400,{},"invalid params") unless pick.set params
-            pick.set { updatedDate: new Date() }
-            pick.save pick.toJSON(),
+            user = new User {id:pick.get("userId")}
+            user.getButters
               error: (_,response) -> res.send response.status_code,{},response
-              success: (pick,response) ->
-                res.send pick.toJSON()
+              success: (butters) -> 
+                user.butters = butters
+                newButterUsed = params.butter and (not pick.get("butter"))
+                butterReclaimed = pick.get("butter") and (not params.butter)
+                return res.send(400,{},"insufficient butter") if newButterUsed and (user.butters <= 0)
+                return res.send(400,{},"invalid params") unless pick.set params            
+                pick.set { updatedDate: new Date() }
+                pick.save pick.toJSON(),
+                  error: (_,response) -> res.send response.status_code,{},response
+                  success: (pick,response) ->
+                    return res.send(pick) unless newButterUsed or butterReclaimed
+                    tr = new ButterTransaction
+                      userId: user.id
+                      pickId: pick.id
+                      amount: (if newButterUsed then -1 else 1)
+                      createdDate: pick.get "updatedDate"
+                    tr.save tr.toJSON(),
+                      error: (model,response) -> res.send response.status_code,{},response
+                      success: (model,response) -> res.send pick

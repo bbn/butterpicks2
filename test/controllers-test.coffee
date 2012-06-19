@@ -595,9 +595,13 @@ exports.testPickPut =
         @game.destroy
           error: logErrorResponse "destroying game"
           success: => 
-            @pick.destroy
-              error: logErrorResponse "destroying pick"
-              callback()
+            pick = new Pick {id:@pick.id}
+            pick.fetch
+              error: logErrorResponse "pick.fetch"
+              success: (pick,response) =>            
+                pick.destroy
+                  error: logErrorResponse "destroying pick testPickPut"
+                  callback()
 
   testPickPut: (test) ->
     test.ok @user.id
@@ -645,3 +649,128 @@ exports.testPickPut =
                 test.ok response
                 test.equal response.status,400,"game should be too early"
                 test.done()
+
+
+
+exports.testPickButters = 
+
+  setUp: (callback) ->
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "user save"
+      success: (u,response) =>
+        @game = new Game
+          startDate: (new Date()).add({days:7})
+        @game.save @game.toJSON(),
+          error: -> logErrorResponse "saving game"
+          success: => 
+            pickData = 
+              userId: @user.id
+              gameId: @game.id
+              home: false
+              away: false
+              butter: false
+            Pick.create pickData,
+              error: logErrorResponse "Pick.create"
+              success: (pick,response) =>
+                @pick = pick
+                callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "destroying user"
+      success: =>
+        @game.destroy
+          error: logErrorResponse "destroying game"
+          success: => 
+            pick = new Pick {id:@pick.id}
+            pick.fetch
+              error: logErrorResponse "pick.fetch in tearDown"
+              success: (pick,response) => 
+                pick.destroy
+                  error: logErrorResponse "destroying pick"
+                  success: => callback()
+
+  testPickPutButters: (test) ->
+    test.ok @user.id
+    test.ok @game.id
+    test.ok @pick.id
+    @user.getButters
+      error: logErrorResponse "@user.getButters"
+      success: (butters) =>
+        test.equal butters,null,"butters should be null"
+        pickData =
+          id: @pick.id
+          userId: @user.id
+          gameId: @game.id
+          home: false
+          away: false
+          draw: false
+          butter: true
+        x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+        x.on "success", (response) =>
+          test.ok response
+          test.equal response.status,400,"should have no butters"
+          pick = new Pick {id:@pick.id}
+          pick.fetch
+            error: logErrorResponse "pick.fetch"
+            success: (pick,response) =>
+              test.equal pick.get("butter"),false,"butter should still be false"
+              tr = new ButterTransaction
+                userId: @user.id
+                amount: 100
+                createdDate: new Date()
+              tr.save tr.toJSON(),
+                error: (model,response) -> console.log "couldn't create ButterTransaction?"
+                success: (butterTransaction,response) => 
+                  @user.getButters
+                    error: logErrorResponse "@user.getButters"
+                    success: (butters) =>
+                      test.equal butters,100,"should now have 100 butters"
+                      x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+                      x.on "success", (response) =>
+                        test.ok response
+                        test.equal response.status,200,"should be 200 when user has butters"
+                        test.ok response.body
+                        for key,val of pickData
+                          test.equal response.body[key],val,"test for #{key}"
+                        pick = new Pick {id:@pick.id}
+                        pick.fetch
+                          error: logErrorResponse "pick.fetch"
+                          success: (pick,response) =>
+                            test.equal pick.get("butter"),true,"butter now true"
+                            @user.getButters
+                              error: logErrorResponse "@user.getButters"
+                              success: (butters) =>
+                                test.equal butters,99
+                                pickData.butter = false
+                                x = mock.put "/pick", { accept:"application/json" }, JSON.stringify pickData
+                                x.on "success", (response) =>
+                                  test.ok response
+                                  test.equal response.status,200
+                                  test.ok response.body
+                                  for key,val of pickData
+                                    test.equal response.body[key],val
+                                  pick = new Pick {id:@pick.id}
+                                  pick.fetch
+                                    error: logErrorResponse "pick.fetch"
+                                    success: (pick,response) =>
+                                      test.equal pick.get("butter"),false,"butter now false"
+                                      @user.getButters
+                                        error: logErrorResponse "@user.getButters"
+                                        success: (butters) =>
+                                          test.equal butters,100
+                                          @user.fetchButterTransactions
+                                            error: logErrorResponse "@user.fetchButterTransactions"
+                                            success: (trannies) =>
+                                              test.equal trannies.length,3
+                                              trannies[0].destroy
+                                                error: logErrorResponse "trannies[0].destroy"
+                                                success: => 
+                                                  trannies[1].destroy
+                                                    error: logErrorResponse "trannies[1].destroy"
+                                                    success: => 
+                                                      trannies[2].destroy
+                                                        error: logErrorResponse "trannies[1].destroy"
+                                                        success: => 
+                                                          test.done()
