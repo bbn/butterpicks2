@@ -15,6 +15,7 @@ Period = models.Period
 User = models.User
 UserPeriod = models.UserPeriod
 Game = models.Game
+League = models.League
 
 require "../lib/date"
 
@@ -26,46 +27,54 @@ logErrorResponse = (model,response) ->
 exports.testGetDailyPeriod =
 
   setUp: (callback) ->
-    @periodData = 
-      league:
-        statsKey: "dskaljdlkskldjaslkjdlaskjd"
-      category: "daily"
-      startDate: new Date("Jan 1, 2010")
-      endDate: new Date("Jan 2, 2010")
-    d = @periodData.startDate
-    dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
-    @periodData.id = "#{@periodData.league.statsKey}_#{@periodData.category}_#{dateString}"
-    p = new Period(@periodData)
-    p.save p.toJSON(),
-      error: -> console.log "error saving Period"
+    @leagueStatsKey = "dsjhksajdhkajshkj"
+    @league = new League
+      statsKey: @leagueStatsKey
+      basePeriodCategory: "daily"
+    @league.save @league.toJSON(),
+      error: logErrorResponse
       success: (model,response) =>
-        @period = model
-        callback()
+        @periodData = 
+          leagueId: @league.id
+          startDate: new Date("Jan 1, 2010")
+          endDate: new Date("Jan 2, 2010")
+        @periodData.id = Period.getCouchId
+          leagueId: @league.id
+          category: @league.get "basePeriodCategory"
+          date: @periodData.startDate
+        p = new Period @periodData
+        p.save p.toJSON(),
+          error: -> console.log "error saving Period"
+          success: (model,response) =>
+            @period = model
+            callback()
 
   tearDown: (callback) ->
     return callback() unless @period
     @period.destroy
-      error: -> logErrorResponse
-      success: -> callback()
+      error: logErrorResponse
+      success: => 
+        @league.destroy
+          error: logErrorResponse
+          success: -> callback()
 
   testGetDailyPeriod: (test) ->
     test.ok @period, "cached model is ok"
-    category = @periodData.category
-    leagueStatsKey = @periodData.league.statsKey
+    test.ok @league.id
     d = @periodData.startDate
     dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
-    url = "/period?category=#{category}&leagueStatsKey=#{leagueStatsKey}&date=#{dateString}"
+    url = "/period?category=#{@league.get("basePeriodCategory")}&leagueId=#{@league.id}&date=#{dateString}"
     x = mock.get url, { accept: "application/json" }
     x.on "success", (response) =>
       test.ok response, "response is ok"
       test.equal response.body.error,null,"error should be null: #{util.inspect response.body.error}"
       test.equal response.status, 200, "status should be 200"
-      test.ok response.body.data
-      periodData = response.body.data
-      test.equal periodData.id, @periodData.id
+      test.ok response.body
+      periodData = response.body
+      test.equal periodData.id, @period.id,"@period.id"
       test.ok periodData.league
-      test.equal periodData.league.statsKey,@periodData.league.statsKey
-      test.equal periodData.category,@periodData.category
+      test.equal periodData.leagueId,@league.id,"@league.id"
+      test.equal periodData.category,@period.get("basePeriodCategory")
       test.equal periodData.startDate, @periodData.startDate.toJSON()
       test.equal periodData.endDate, @periodData.endDate.toJSON()
       test.done()
@@ -74,28 +83,36 @@ exports.testGetDailyPeriod =
 exports.testFetchAssociatedModels = 
 
   setUp: (callback) ->
-    @periodData = 
-      league:
-        statsKey: "o89xn3oiuqndjklwhank"
-      category: "daily"
-      startDate: new Date("Jan 11, 2010")
-      endDate: new Date("Jan 12, 2010")
-    @periodData.id = Period.getCouchId
-      category: @periodData.category
-      date: @periodData.startDate
-      leagueStatsKey: @periodData.league.statsKey
-    p = new Period(@periodData)
-    p.save p.toJSON(),
-      error: -> logErrorResponse
+    @leagueStatsKey = "oe82gqn8uwxgn"
+    @league = new League
+      statsKey: @leagueStatsKey
+      basePeriodCategory: "daily"
+    @league.save @league.toJSON(),
+      error: logErrorResponse
       success: (model,response) =>
-        @period = model
-        callback()
+        @periodData = 
+          leagueId: @league.id
+          startDate: new Date("Jan 11, 2010")
+          endDate: new Date("Jan 12, 2010")
+        @periodData.id = Period.getCouchId
+          category: @league.get("basePeriodCategory")
+          date: @periodData.startDate
+          leagueId: @league.id
+        p = new Period(@periodData)
+        p.save p.toJSON(),
+          error: -> logErrorResponse
+          success: (model,response) =>
+            @period = model
+            callback()
 
   tearDown: (callback) ->
     return callback() unless @period
     @period.destroy
       error: -> logErrorResponse
-      success: -> callback()
+      success: => 
+        @league.destroy
+          error: -> logErrorResponse
+          success: -> callback()
 
   testFetchGames: (test) ->
     test.ok @period
@@ -104,8 +121,7 @@ exports.testFetchAssociatedModels =
       success: (games,response) =>
         test.equal games.length,0
         g1 = new Game
-          league:
-            statsKey: @periodData.league.statsKey
+          leagueId: @league.id
           startDate: (new Date(@periodData.startDate)).addHours(1)
         g1.save g1.toJSON(),
           error: logErrorResponse
@@ -116,11 +132,9 @@ exports.testFetchAssociatedModels =
               error: logErrorResponse
               success: (games,response) =>
                 test.equal games.length,1
-                test.ok games[0].id
                 test.equal games[0].id, game1.id
                 g2 = new Game
-                  league:
-                    statsKey: @periodData.league.statsKey
+                  leagueId: @league.id
                   startDate: new Date(2010,1,16,17,00)
                 g2.save g2.toJSON(),
                   error: logErrorResponse

@@ -4,6 +4,7 @@ couch = require "./couch"
 models = require "./models"
 User = models.User
 Game = models.Game
+League = models.League
 Period = models.Period
 UserPeriod = models.UserPeriod
 Pick = models.Pick
@@ -12,6 +13,13 @@ ButterTransaction = models.ButterTransaction
 workers = require "./workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
 
+
+League.fetchForStatsKey = (statsKey,options) ->
+  couch.db.view "leagues","byStatsKey",{key:statsKey,include_docs:true},(err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success(null,headers) unless body.rows.length
+    league = new League(body.rows[0].doc)
+    options.success league
 
 
 User::getButters = (options) ->
@@ -57,34 +65,42 @@ Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
 
 
 Game::updateFromStatsAttributes = (params,options) ->
-  oldBasePeriodId = @basePeriodId()
-  attributes = Game.attrFromStatServerParams params
-  @save attributes, 
+  League.fetchForStatsKey params.leagueStatsKey,
     error: options.error
-    success: (game,gameCouchResponse) =>
-      console.log "FIXME assumption of daily category in PeriodUpdateJob creation"
-      periodUpdateJobParams =
-        periodId: game.basePeriodId()
-        league: game.get "league"
-        category: "daily"
-        withinDate: game.get "startDate"
-      PeriodUpdateJob.create periodUpdateJobParams,
+    success: (league,response) =>
+      return options.error(null,"no league for statsKey #{params.leagueStatsKey}") unless league
+      @set {leagueId:league.id,startDate:new Date(params.starts_at*1000)}
+      @fetchBasePeriodId
         error: options.error
-        success: =>
-          unless oldBasePeriodId and oldBasePeriodId != game.basePeriodId()
-            return options.success game,gameCouchResponse
-          PeriodUpdateJob.create {periodId: oldBasePeriodId},
+        success: (basePeriodId) =>
+          oldBasePeriodId = basePeriodId
+          attributes = Game.attrFromStatServerParams params
+          attributes.leagueId = league.id
+          @save attributes, 
             error: options.error
-            success: -> options.success game,gameCouchResponse 
+            success: (game,gameCouchResponse) =>
+              game.fetchBasePeriodId
+                error: options.error
+                success: (newBasePeriodId) =>
+                  periodUpdateJobParams =
+                    periodId: newBasePeriodId
+                    leagueId: league.id
+                    category: league.basePeriodCategory
+                    withinDate: game.get "startDate"
+                  PeriodUpdateJob.create periodUpdateJobParams,
+                    error: options.error
+                    success: =>
+                      unless oldBasePeriodId and oldBasePeriodId != newBasePeriodId
+                        return options.success game,gameCouchResponse
+                      PeriodUpdateJob.create {periodId: oldBasePeriodId},
+                        error: options.error
+                        success: -> options.success game,gameCouchResponse 
 
 
 Game.attrFromStatServerParams = (params) ->
   attributes =
     statsKey: params.statsKey
     statsLatestUpdateDate: new Date(params.updated_at*1000)
-    league:
-      abbreviation: params.league
-      statsKey: params.leagueStatsKey
     awayTeam:
       statsKey: params.away_team.key
       location: params.away_team.location
@@ -103,13 +119,17 @@ Game.attrFromStatServerParams = (params) ->
     legit: params.legit
 
 
-Game::basePeriodId = ->
-  return null unless @get("leagueStatsKey") and @get(startDate)
-  console.log "FIXME assumption of daily category for basePeriodId"
-  Period.getCouchId
-    leagueStatsKey: @get "leagueStatsKey"
-    category: "daily"
-    date: @get "startDate"
+Game::fetchBasePeriodId = (options) ->
+  return options.error(null,"param error") unless @get("leagueId") and @get("startDate")
+  league = new League {id:@get("leagueId")}
+  league.fetch
+    error: options.error
+    success: (league,response) =>
+      id = Period.getCouchId
+        leagueId: league.id
+        category: league.get "basePeriodCategory"
+        date: @get "startDate"
+      options.success id
 
 
 Period.getCouchId = (params) ->
@@ -117,39 +137,45 @@ Period.getCouchId = (params) ->
     when "daily"
       d = new Date(params.date)
       dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
-      periodId = "#{params.leagueStatsKey}_#{params.category}_#{dateString}"
+      periodId = "#{params.leagueId}_#{params.category}_#{dateString}"
     when "lifetime"
-      periodId = "#{params.leagueStatsKey}_#{params.category}"
+      periodId = "#{params.leagueId}_#{params.category}"
   periodId
 
 
 Period.getOrCreateBasePeriodForGame = (game,options) ->
-  basePeriodId = game.basePeriodId()
-  basePeriod = new Period({ id:periodId })
-  p.fetch
-    success: options.success
-    error: (p,response) -> 
-      console.log "FIXME confirm that error comes from absent model: #{util.inspect response}"
-      console.log "+++ creating #{p.id}"
-      gameDate = game.get "startDate"
-      startDate = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate())
-      endDate = (new Date(startDate)).add {days:1} 
-      console.log "FIXME assumption of daily period"
-      console.log "FIXME adjust endDate depending on category of period"
-      data =
-        league:
-          abbreviation: game.get("league").abbreviation
-          statsKey: game.get("league").statsKey
-        category: "daily" 
-        startDate: startDate
-        endDate: endDate
-      p.save data,options
+  game.fetchBasePeriodId
+    error: options.error
+    success: (basePeriodId) ->
+      p = new Period({ id:basePeriodId })
+      p.fetch
+        success: options.success
+        error: (p,response) -> 
+          console.log "FIXME confirm that error comes from absent model: #{util.inspect response}"
+          league = new League {id:game.get("leagueId")}
+          league.fetch
+            error: options.error
+            success: (league,response) ->
+              gameDate = game.get "startDate"
+              switch league.get("basePeriodCategory") 
+                when "daily"
+                  startDate = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate())
+                  endDate = (new Date(startDate)).add {days:1} 
+                when "weekly"
+                  console.log "FIXME no code in place for weekly categories"
+                  console.log "FIXME adjust endDate depending on category of period"
+              data =
+                leagueId: game.get("leagueId")
+                category: league.get("basePeriodCategory") 
+                startDate: startDate
+                endDate: endDate
+              p.save data,options
 
 
 Period::fetchGames = (options) ->
   viewParams =
-    startkey: [@get("league").statsKey, @get("startDate").toJSON()]
-    endkey:   [@get("league").statsKey, @get("endDate").toJSON()]
+    startkey: [@get("leagueId"), @get("startDate").toJSON()]
+    endkey:   [@get("leagueId"), @get("endDate").toJSON()]
     include_docs: true
   couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
     return options.error(null,err) if err
@@ -188,7 +214,7 @@ UserPeriod.createForUserAndPeriod = (params,options) ->
       userPeriod = new UserPeriod
         id: userPeriodId
         periodId: p.id
-        leagueStatsKey: p.get("league").statsKey
+        leagueId: p.get("leagueId")
         periodStartDate: p.get("startDate")
         periodCategory: p.get("category")
         userId: params.userId
@@ -210,8 +236,8 @@ UserPeriod.fetchForPeriod = (params,options) ->
 
 UserPeriod.fetchForUserAndLeague = (params,options) ->
   viewParams =
-    startkey: [params.userId, params.leagueStatsKey, (new Date(1970,1,1)).toJSON()]
-    endkey:   [params.userId, params.leagueStatsKey, (new Date(2070,1,1)).toJSON()]
+    startkey: [params.userId, params.leagueId, (new Date(1970,1,1)).toJSON()]
+    endkey:   [params.userId, params.leagueId, (new Date(2070,1,1)).toJSON()]
     include_docs: true
   couch.db.view "userPeriods","byUserIdAndLeagueAndDate", viewParams, (err,body,headers) ->
     return options.error(null,err) if err

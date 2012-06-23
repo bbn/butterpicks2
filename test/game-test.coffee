@@ -14,6 +14,7 @@ bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 Game = models.Game
+League = models.League
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -22,8 +23,9 @@ PeriodUpdateJob.workSuspended = true
 gameUpdater = require "../lib/game-updater"
 
 
-logErrorResponse = (model,response) ->
-  console.log "response: #{require('util').inspect response}"
+logErrorResponse = (message) ->
+  return (model,response) ->
+    console.log "#{message} -> response: #{require('util').inspect response}"
 
 
 exports.couchViewForMostRecentlyUpdatedGame = (test) ->
@@ -78,109 +80,132 @@ exports.testFetchingMissingGame = (test) ->
       test.done()
 
 
-exports.testGamePost = (test) ->
-  data = 
-    statsKey: "9128b89e7g12qwiuexbqiuwbe128"
-    updated_at: 1338482433
-    league: "MLB"
-    leagueStatsKey: "1028ei1e2nhiouznhn1z2"
-    away_team:
-      key: "7v8tfgy9humi"
-      location: "Chicago"
-      name: "Cubs"
-    home_team:
-      key: "u1zdhqlkajshd"
-      location: "Boston"
-      name: "Red Sox"
-    starts_at: 1338482480
-    away_score: 7
-    home_score: 2
-    status: "7th inning"
-    final: false
-    legit: true
-  x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
-  x.on 'success', (response) ->
-    test.equal response.status,201
-    test.ok response.body.data
-    gameData = response.body.data
-    test.equal gameData.doctype,"Game"
-    test.equal gameData.statsKey,data.statsKey
-    test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
-    test.equal gameData.league.abbreviation,data.league
-    test.equal gameData.league.statsKey,data.leagueStatsKey
-    test.equal gameData.awayTeam.statsKey,data.away_team.key
-    test.equal gameData.awayTeam.location,data.away_team.location
-    test.equal gameData.awayTeam.name,data.away_team.name
-    test.equal gameData.homeTeam.statsKey,data.home_team.key
-    test.equal gameData.homeTeam.location,data.home_team.location
-    test.equal gameData.homeTeam.name,data.home_team.name
-    test.equal gameData.startDate,(new Date(data.starts_at*1000)).toJSON()
-    test.equal gameData.status.score.away,data.away_score
-    test.equal gameData.status.score.home,data.home_score
-    test.equal gameData.status.text,data.status
-    test.equal gameData.status.final,data.final
-    test.equal gameData.legit,data.legit
-    test.equal gameData.pickCount.home,0
-    test.equal gameData.pickCount.away,0
-    test.equal gameData.pickCount.draw,0
-    test.ok gameData.id
-    PeriodUpdateJob.getNext
-      limit: 2
-      error: logErrorResponse
-      success: (jobs,_) ->
-        test.ok jobs
-        test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
-        test.equal jobs[0].get("league").statsKey,data.leagueStatsKey
-        test.ok jobs[0].id
-        jobs[0].destroy
-          error: logErrorResponse
-          success: ->
-            g = new Game({id:gameData.id})
-            g.fetch
-              error: logErrorResponse
-              success: (model,response) ->
-                model.destroy
-                  error: logErrorResponse
-                  success: -> test.done()
+exports.testGamePost = 
+
+  setUp: (callback) ->
+    @leagueStatsKey = "9128b89e7g12qwiuexbqiuwbe128"
+    league = new League
+      statsKey: @leagueStatsKey
+      basePeriodCategory: "daily"
+    league.save league.toJSON(),
+      error: logErrorResponse "setUp"
+      success: (league,response) =>
+        @league = league
+        callback()
+
+  tearDown: (callback) ->
+    @league.destroy
+      error: logErrorResponse "@league.destroy"
+      success: -> callback()
+
+  testGamePost: (test) ->
+    data = 
+      statsKey: @leagueStatsKey
+      updated_at: 1338482433
+      league: "MLB"
+      leagueStatsKey: @leagueStatsKey
+      away_team:
+        key: "7v8tfgy9humi"
+        location: "Chicago"
+        name: "Cubs"
+      home_team:
+        key: "u1zdhqlkajshd"
+        location: "Boston"
+        name: "Red Sox"
+      starts_at: 1338482480
+      away_score: 7
+      home_score: 2
+      status: "7th inning"
+      final: false
+      legit: true
+    x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
+    x.on 'success', (response) =>
+      test.equal response.status,201
+      test.ok response.body
+      gameData = response.body
+      test.equal gameData.doctype,"Game"
+      test.equal gameData.statsKey,data.statsKey
+      test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+      test.equal gameData.leagueId,@league.id
+      test.equal gameData.awayTeam.statsKey,data.away_team.key
+      test.equal gameData.awayTeam.location,data.away_team.location
+      test.equal gameData.awayTeam.name,data.away_team.name
+      test.equal gameData.homeTeam.statsKey,data.home_team.key
+      test.equal gameData.homeTeam.location,data.home_team.location
+      test.equal gameData.homeTeam.name,data.home_team.name
+      test.equal gameData.startDate,(new Date(data.starts_at*1000)).toJSON()
+      test.equal gameData.status.score.away,data.away_score
+      test.equal gameData.status.score.home,data.home_score
+      test.equal gameData.status.text,data.status
+      test.equal gameData.status.final,data.final
+      test.equal gameData.legit,data.legit
+      test.equal gameData.pickCount.home,0
+      test.equal gameData.pickCount.away,0
+      test.equal gameData.pickCount.draw,0
+      test.ok gameData.id
+      PeriodUpdateJob.getNext
+        limit: 2
+        error: logErrorResponse
+        success: (jobs,_) =>
+          test.ok jobs
+          test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
+          test.equal jobs[0].get("leagueId"),@league.id
+          test.ok jobs[0].id
+          jobs[0].destroy
+            error: logErrorResponse
+            success: ->
+              g = new Game({id:gameData.id})
+              g.fetch
+                error: logErrorResponse
+                success: (model,response) ->
+                  model.destroy
+                    error: logErrorResponse
+                    success: -> test.done()
 
 
 exports.testGamePostUpdate =
 
   setUp: (callback) ->
-    @gameData =
-      statsKey: 'nrx1nx1rn89n1n89r1'
-      id: 'game_nrx1nx1rn89n1n89r1'
-      statsLatestUpdateDate: new Date(2010,1,1)
-      league: 
-        abbreviation: 'MLB'
-        statsKey: 'r1373r782'
-      awayTeam: 
-        statsKey: 'xn893rpiqu3hni'
-        location: 'Chicago'
-        name: 'Cubs'
-      homeTeam: 
-        statsKey: '78oniuynoiuy'
-        location: 'Boston'
-        name: 'Red Sox'
-      startDate: new Date(2010,2,2)
-      status:
-        score: 
-          home: 72
-          away: 1
-        text: '2nd inning'
-        final: false
-      legit: true
-      pickCount:
-        home: 2536
-        away: 1234
-        draw: null
-      basePeriodKey: "o2enx1khad89"
-    g = new Game(@gameData)
-    g.save g.toJSON(),
-      error: logErrorResponse
-      success: (model,response) =>
-        @model = model
-        callback()
+    @leagueStatsKey = "9128b89e7g12qwiuexbqiuwbe128"
+    league = new League
+      statsKey: @leagueStatsKey
+      basePeriodCategory: "daily"
+    league.save league.toJSON(),
+      error: logErrorResponse "setUp"
+      success: (league,response) =>
+        @league = league
+        @gameData =
+          statsKey: 'nrx1nx1rn89n1n89r1'
+          id: 'game_nrx1nx1rn89n1n89r1'
+          statsLatestUpdateDate: new Date(2010,1,1)
+          leagueId: @league.id
+          awayTeam: 
+            statsKey: 'xn893rpiqu3hni'
+            location: 'Chicago'
+            name: 'Cubs'
+          homeTeam: 
+            statsKey: '78oniuynoiuy'
+            location: 'Boston'
+            name: 'Red Sox'
+          startDate: new Date(2010,2,2)
+          status:
+            score: 
+              home: 72
+              away: 1
+            text: '2nd inning'
+            final: false
+          legit: true
+          pickCount:
+            home: 2536
+            away: 1234
+            draw: null
+          basePeriodKey: "o2enx1khad89"
+        g = new Game(@gameData)
+        g.save g.toJSON(),
+          error: logErrorResponse
+          success: (model,response) =>
+            @model = model
+            callback()
 
   tearDown: (callback) ->
     return callback() unless @model
@@ -189,14 +214,17 @@ exports.testGamePostUpdate =
       success: =>
         @model.destroy
           error: logErrorResponse
-          success: -> callback()
+          success: => 
+            @league.destroy
+              error: logErrorResponse
+              success: -> callback()
 
   testGamePostUpdate: (test) ->
     data = 
       statsKey: @gameData.statsKey
       updated_at: (new Date(2010,1,2)).valueOf()/1000
       league: "MLB"
-      leagueStatsKey: "r1373r782"
+      leagueStatsKey: @league.get "statsKey"
       away_team:
         key: "xn893rpiqu3hni"
         location: "Chicago"
@@ -214,13 +242,12 @@ exports.testGamePostUpdate =
     x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
     x.on 'success', (response) =>
       test.equal response.status,201
-      test.ok response.body.data
-      gameData = response.body.data
+      test.ok response.body
+      gameData = response.body
       test.equal gameData.doctype,"Game"
       test.equal gameData.statsKey,data.statsKey
       test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
-      test.equal gameData.league.abbreviation,data.league
-      test.equal gameData.league.statsKey,data.leagueStatsKey
+      test.equal gameData.leagueId,@league.id
       test.equal gameData.awayTeam.statsKey,data.away_team.key
       test.equal gameData.awayTeam.location,data.away_team.location
       test.equal gameData.awayTeam.name,data.away_team.name
@@ -241,10 +268,10 @@ exports.testGamePostUpdate =
       PeriodUpdateJob.getNext
         limit: 2
         error: logErrorResponse
-        success: (jobs,_) ->
+        success: (jobs,_) =>
           test.ok jobs
           test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
-          test.equal jobs[0].get("league").statsKey,data.leagueStatsKey
+          test.equal jobs[0].get("leagueId"),@league.id
           test.ok jobs[0].id
           jobs[0].destroy
             error: logErrorResponse
@@ -254,71 +281,78 @@ exports.testGamePostUpdate =
 
 exports.couchViewForGamesByLeagueAndStartDate = (test) ->
   leagueStatsKey = "dqxugoqd7ngauidgas"
-  startDate = new Date(2012,1,1)
-  gameDate = new Date(2012,1,1,12,30)
-  endDate = new Date(2012,1,2)
-  laterGameDate = new Date(2012,1,2,12,30)
-  viewParams =
-    startkey: [leagueStatsKey,startDate.toJSON()]
-    endkey: [leagueStatsKey,endDate.toJSON()]
-    include_docs: true
-  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
-    test.ok !err
-    test.ok body
-    test.ok body.rows
-    test.equal body.rows.length,0
-    g = new Game
-      league:
-        statsKey: leagueStatsKey
-      startDate: gameDate
-    g.save g.toJSON(),
-      error: logErrorResponse
-      success: (model,response) ->
-        test.ok model
-        test.ok model.id
-        test.equal model.get("league").statsKey,leagueStatsKey
-        test.equal model.get("startDate").toJSON(),gameDate.toJSON()
-        viewParams =
-          startkey: [leagueStatsKey,startDate.toJSON()]
-          endkey: [leagueStatsKey,endDate.toJSON()]
-          include_docs: true
-        couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
-          test.ok !err
-          test.ok body
-          test.ok body.rows
-          test.equal body.rows.length, 1
-          test.ok body.rows[0].doc  
-          test.equal body.rows[0].doc._id, model.id
-          test.equal body.rows[0].doc.league.statsKey, leagueStatsKey
-          test.equal body.rows[0].doc.startDate, gameDate.toJSON()
-          gB = new Game
-            league:
-              statsKey: leagueStatsKey
-            startDate: laterGameDate
-          gB.save gB.toJSON(),
-            error: logErrorResponse
-            success: (modelB,response) ->
-              test.ok modelB
-              test.ok modelB.id
-              test.equal modelB.get("league").statsKey,leagueStatsKey
-              test.equal modelB.get("startDate").toJSON(),laterGameDate.toJSON()
-              viewParams =
-                startkey: [leagueStatsKey,startDate.toJSON()]
-                endkey: [leagueStatsKey,endDate.toJSON()]
-                include_docs: true
-              couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
-                test.ok !err
-                test.ok body
-                test.ok body.rows
-                test.equal body.rows.length, 1, "should only pick up first game"
-                test.ok body.rows[0].doc  
-                test.equal body.rows[0].doc._id, model.id, "1st game, not 2nd"
-                modelB.destroy
-                  error: logErrorResponse
-                  success: ->
-                    model.destroy
+  league = new League
+    statsKey: leagueStatsKey
+    basePeriodCategory: "daily"
+  league.save league.toJSON(),
+    error: logErrorResponse "league.save"
+    success: (model,response) =>
+      startDate = new Date(2012,1,1)
+      gameDate = new Date(2012,1,1,12,30)
+      endDate = new Date(2012,1,2)
+      laterGameDate = new Date(2012,1,2,12,30)
+      viewParams =
+        startkey: [league.id,startDate.toJSON()]
+        endkey: [league.id,endDate.toJSON()]
+        include_docs: true
+      couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+        test.ok !err
+        test.ok body
+        test.ok body.rows
+        test.equal body.rows.length,0
+        g = new Game
+          leagueId: league.id
+          startDate: gameDate
+        g.save g.toJSON(),
+          error: logErrorResponse
+          success: (model,response) ->
+            test.ok model
+            test.ok model.id
+            test.equal model.get("leagueId"),league.id
+            test.equal model.get("startDate").toJSON(),gameDate.toJSON()
+            viewParams =
+              startkey: [league.id,startDate.toJSON()]
+              endkey: [league.id,endDate.toJSON()]
+              include_docs: true
+            couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+              test.ok !err
+              test.ok body
+              test.ok body.rows
+              test.equal body.rows.length, 1
+              test.ok body.rows[0].doc
+              test.equal body.rows[0].doc._id, model.id
+              test.equal body.rows[0].doc.leagueId, league.id
+              test.equal body.rows[0].doc.startDate, gameDate.toJSON()
+              gB = new Game
+                leagueId: league.id
+                startDate: laterGameDate
+              gB.save gB.toJSON(),
+                error: logErrorResponse
+                success: (modelB,response) ->
+                  test.ok modelB
+                  test.ok modelB.id
+                  test.equal modelB.get("leagueId"),league.id
+                  test.equal modelB.get("startDate").toJSON(),laterGameDate.toJSON()
+                  viewParams =
+                    startkey: [league.id,startDate.toJSON()]
+                    endkey: [league.id,endDate.toJSON()]
+                    include_docs: true
+                  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+                    test.ok !err
+                    test.ok body
+                    test.ok body.rows
+                    test.equal body.rows.length, 1, "should only pick up first game"
+                    test.ok body.rows[0].doc  
+                    test.equal body.rows[0].doc._id, model.id, "1st game, not 2nd"
+                    modelB.destroy
                       error: logErrorResponse
-                      success: -> test.done()
+                      success: ->
+                        model.destroy
+                          error: logErrorResponse
+                          success: -> 
+                            league.destroy
+                              error: logErrorResponse
+                              success: -> test.done()
 
 
 exports.gameModelTest = (test) ->
@@ -367,3 +401,6 @@ exports.gameModelTest = (test) ->
   test.equal g.homeWin(),false
   test.equal g.awayWin(),false
   test.done()
+
+
+console.log "TODO test game update where a game changes periods."

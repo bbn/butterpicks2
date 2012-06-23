@@ -19,9 +19,7 @@ module.exports = class PeriodUpdateJob extends Job
     doctype: "PeriodUpdateJob"
     createdDate: new Date()
     periodId: null
-    league:
-      statsKey: null
-      abbreviation: null
+    leagueId: null
     category: null
     withinDate: null
 
@@ -82,13 +80,13 @@ module.exports = class PeriodUpdateJob extends Job
         console.log "FIXME: confirm it's missing and not a real error: #{util.inspect response}"
         console.log "FIXME: generalize for non-daily periods"
         withinDate = @get "withinDate"
-        league = @get "league"
+        leagueId = @get "leagueId"
         category = @get "category"
-        return options.error(model,response) unless withinDate and league and category
+        return options.error(model,response) unless withinDate and leagueId and category
         startDate = withinDate.clearTime()
         endDate = (new Date(startDate)).addDays 1
         period.set
-          league: league
+          leagueId: leagueId
           category: category
           startDate: startDate
           endDate: endDate

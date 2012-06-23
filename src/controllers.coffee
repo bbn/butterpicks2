@@ -27,9 +27,7 @@ exports.router.map ->
     return res.send 400,{},{error:"no facebookId param"} unless params.facebookId 
     couch.db.view "facebookObjects","allByFacebookId", { key:params.facebookId }, (err,body,headers) ->
       return res.send err.status_code,{},err if err
-      res.send 
-        requestParams: params
-        data: body
+      res.send body
 
 
   @post("/user").bind (req,res,params) ->
@@ -45,7 +43,6 @@ exports.router.map ->
         error: (model,response) -> res.send response.status_code,{},response
         success: (model,response) ->
           res.send
-            requestParams: params
             id: model.id
             facebookId: model.get "facebookId"
             email: model.get "email"
@@ -64,38 +61,30 @@ exports.router.map ->
     Game.createOrUpdateGameFromStatsAttributes params,
       error: (_,response) -> res.send response.status_code,{},response
       success: (game,response) -> 
-        res.send 
-          requestParams: params
-          data: game.toJSON()
+        res.send game
 
 
   @get("/period").bind (req,res,params) ->
-    for param in ["category","leagueStatsKey","date"]
+    for param in ["category","leagueId","date"]
       return res.send 400,{},{error:"no #{param} param"} unless params[param]
     periodId = Period.getCouchId params
     p = new Period({ id:periodId })
     p.fetch
       error: (model,response) -> res.send response.status_code,{},response
-      success: (model,response) -> 
-        res.send 
-          requestParams: params
-          data: model.toJSON()
+      success: (model,response) -> res.send model
 
 
   @get("/user-period").bind (req,res,params) ->
-    return res.send 400,{},{error:"invalid params"} unless (params.userId and params.leagueStatsKey) or params.periodId
+    return res.send 400,{},{error:"invalid params"} unless (params.userId and params.leagueId) or params.periodId
     if params.userId and params.periodId
       f = UserPeriod.fetchForUserAndPeriod
     else if params.periodId
       f = UserPeriod.fetchForPeriod
-    else if params.userId and params.leagueStatsKey
+    else if params.userId and params.leagueId
       f = UserPeriod.fetchForUserAndLeague
     f params,
       error: (_,response) -> res.send response.status_code,{},response
-      success: (data,response) -> 
-        res.send 
-          requestParams: params
-          data: data
+      success: (data,response) -> res.send 200,{},data
 
 
   @get("/pick").bind (req,res,params) ->
@@ -103,9 +92,7 @@ exports.router.map ->
     Pick.fetchForUserAndGame params,
       error: (_,response) -> res.send response.status_code,{},response
       success: (data,response) -> 
-        res.send 
-          requestParams: params
-          data: data
+        res.send data
 
   @post("/pick").bind (req,res,params) ->
     return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId

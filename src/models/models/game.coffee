@@ -8,9 +8,7 @@ module.exports = class Game extends Backbone.Model
     doctype: "Game"
     statsKey: null
     statsLatestUpdateDate: null
-    league: 
-      statsKey: null
-      abbreviation: null
+    leagueId: null 
     awayTeam:
       statsKey: null
       location: null

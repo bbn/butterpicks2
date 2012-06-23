@@ -16,6 +16,7 @@ Period = models.Period
 UserPeriod = models.UserPeriod
 Game = models.Game
 Pick = models.Pick
+League = models.League
 
 
 logErrorResponse = (message) ->
@@ -137,20 +138,25 @@ exports.testUserPeriodGetController =
     @user.save @user.toJSON(),
       error: logErrorResponse "user save"
       success: (u,response) =>
-        @periodData = 
-          league:
-            statsKey: "iybybkygboo87787878t87g"
-          category: "daily"
-          startDate: new Date("Jan 21, 2012")
-          endDate: new Date("Jan 22, 2012")
-        @periodData.id = Period.getCouchId
-          category: @periodData.category
-          date: @periodData.startDate
-          leagueStatsKey: @periodData.league.statsKey
-        @period = new Period(@periodData)
-        @period.save @period.toJSON(),
-          error: -> logErrorResponse "saving period"
-          success: -> callback()
+        @leagueStatsKey = "dlkajshno8y3n4lkjhsad"
+        @league = new League
+          statsKey: @leagueStatsKey
+          basePeriodCategory: "daily"
+        @league.save @league.toJSON(),
+          error: logErrorResponse "@league.save"
+          success: (model,response) =>
+            @periodData = 
+              leagueId: @league.id
+              startDate: new Date("Jan 21, 2012")
+              endDate: new Date("Jan 22, 2012")
+            @periodData.id = Period.getCouchId
+              category: @periodData.category
+              date: @periodData.startDate
+              leagueId: @league.id
+            @period = new Period(@periodData)
+            @period.save @period.toJSON(),
+              error: logErrorResponse "saving period"
+              success: -> callback()
 
   tearDown: (callback) ->
     @user.destroy
@@ -176,8 +182,8 @@ exports.testUserPeriodGetController =
           x = mock.get "/user-period?userId=#{@user.id}&periodId=#{@period.id}", { accept:"application/json" }
           x.on "success", (response) =>
             test.ok response
-            test.ok response.body.data
-            userPeriodData = response.body.data
+            test.ok response.body
+            userPeriodData = response.body
             test.equal userPeriodData.id, userPeriod.id
             test.equal userPeriodData.userId, @user.id
             test.equal userPeriodData.leagueStatsKey, @period.get("league").statsKey
@@ -191,8 +197,8 @@ exports.testUserPeriodGetController =
     x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
     x.on "success", (response) =>
       test.ok response
-      test.ok response.body.data
-      userPeriodData = response.body.data
+      test.ok response.body
+      userPeriodData = response.body
       test.equal userPeriodData.length, 0
       params = 
         userId: @user.id
@@ -203,8 +209,8 @@ exports.testUserPeriodGetController =
           x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
           x.on "success", (response) =>
             test.ok response
-            test.ok response.body.data
-            userPeriodData = response.body.data
+            test.ok response.body
+            userPeriodData = response.body
             test.equal userPeriodData.length, 1
             userPeriodData = userPeriodData[0]
             test.equal userPeriodData.userId, @user.id
@@ -225,16 +231,16 @@ exports.testUserPeriodGetController =
                         x = mock.get "/user-period?periodId=#{@period.id}&descending=true", { accept:"application/json" }
                         x.on "success", (response) =>
                           test.ok response
-                          test.ok response.body.data
-                          userPeriodData = response.body.data
+                          test.ok response.body
+                          userPeriodData = response.body
                           test.equal userPeriodData.length, 2
                           test.equal userPeriodData[0].points,1
                           test.equal userPeriodData[1].points,0
                           x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
                           x.on "success", (response) =>
                             test.ok response
-                            test.ok response.body.data
-                            userPeriodData = response.body.data
+                            test.ok response.body
+                            userPeriodData = response.body
                             test.equal userPeriodData.length, 2
                             test.equal userPeriodData[0].points,0
                             test.equal userPeriodData[1].points,1
@@ -253,21 +259,22 @@ exports.testUserPeriodGetController =
 
 
   testUserPeriodGetControllerOnlyUserId: (test) ->
-    x = mock.get "/user-period?userId=#{@user.id}&leagueStatsKey=#{@period.get('league').statsKey}", { accept:"application/json" }
+    x = mock.get "/user-period?userId=#{@user.id}&leagueId=#{@period.get('leagueId')}", { accept:"application/json" }
     x.on "success", (response) =>
       test.ok response
-      test.ok response.body.data
-      userPeriodData = response.body.data
-      test.equal userPeriodData.length, 0
+      test.ok response.body
+      userPeriodData = response.body
+      test.equal userPeriodData.length, 0, "userPeriodData.length 1"
       UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
         error: logErrorResponse "UserPeriod.createForUserAndPeriod"
         success: (userPeriod,response) =>
-          x = mock.get "/user-period?userId=#{@user.id}&leagueStatsKey=#{@period.get('league').statsKey}", { accept:"application/json" }
+          test.ok response
+          x = mock.get "/user-period?userId=#{@user.id}&leagueId=#{@period.get('leagueId')}", { accept:"application/json" }
           x.on "success", (response) =>
             test.ok response
-            test.ok response.body.data
-            userPeriodData = response.body.data
-            test.equal userPeriodData.length, 1
+            test.ok response.body
+            userPeriodData = response.body
+            test.equal userPeriodData.length, 1, "userPeriodData.length 2"
             userPeriod.destroy
               error: logErrorResponse "userPeriod.destroy"
               success: -> test.done()
@@ -307,8 +314,8 @@ exports.testPickGet =
           x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
           x.on "success", (response) =>
             test.ok response
-            test.ok response.body.data
-            pickData = response.body.data
+            test.ok response.body
+            pickData = response.body
             test.equal pickData.id, pick.id
             test.equal pickData.userId, @user.id
             test.equal pickData.gameId, @game.id

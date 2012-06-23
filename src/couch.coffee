@@ -7,6 +7,10 @@ console.log "couch: using '%s' database",dbName
 
 
 couch.designDocs = 
+  leagues:
+    views:
+      byStatsKey:
+        map: "function (doc) { if (doc.doctype=='League') emit(doc.statsKey); }"
   facebookObjects:
     views:
       allByFacebookId:
@@ -24,17 +28,17 @@ couch.designDocs =
       mostRecentlyUpdated:
         map: "function (doc) { if (doc.doctype=='Game') emit(doc.statsLatestUpdateDate, null); }"
       byLeagueAndStartDate:
-        map: "function (doc) { if (doc.doctype=='Game') emit([doc.league.statsKey,doc.startDate], null);  }"
+        map: "function (doc) { if (doc.doctype=='Game') emit([doc.leagueId,doc.startDate], null);  }"
   periods:
     views:
       byLeagueCategoryAndDates:
-        map: "function (doc) { if (doc.doctype=='Period') emit([doc.league.statsKey,doc.category,doc.startDate,doc.endDate],null); }"
+        map: "function (doc) { if (doc.doctype=='Period') emit([doc.leagueId,doc.category,doc.startDate,doc.endDate],null); }"
   userPeriods:
     views:
       byPeriodIdAndPoints:
         map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.periodId,doc.points],null); }"
       byUserIdAndLeagueAndDate:
-        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.userId,doc.leagueStatsKey,doc.periodStartDate],null); }"
+        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.userId,doc.leagueId,doc.periodStartDate],null); }"
   jobs:
     views:
       byType:
