@@ -10,6 +10,7 @@ Period = models.Period
 Game = models.Game
 User = models.User
 UserPeriod = models.UserPeriod
+League = models.League
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -120,31 +121,36 @@ exports.userPeriodUpdateJobWorkDeletedPeriod =
     @user.save @user.toJSON(),
       error: logErrorResponse "@user.save"
       success: =>
-        periodData = 
-          league:
-            statsKey: "alwhrnp98y2"
-          category: "daily"
-          startDate: new Date("Feb 11, 2010")
-          endDate: new Date("Feb 12, 2010")
-        periodData.id = Period.getCouchId
-          category: periodData.category
-          date: periodData.startDate
-          leagueStatsKey: periodData.league.statsKey
-        @period = new Period periodData
-        @period.save @period.toJSON(),
-          error: -> logErrorResponse
-          success: (period,response) =>          
-            UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
-              error: logErrorResponse "UserPeriod.createForUserAndPeriod"
-              success: (userPeriod,response) =>
-                @userPeriod = userPeriod
-                UserPeriodUpdateJob.create {userPeriodId:@userPeriod.id},
-                  error: logErrorResponse "UserPeriodUpdateJob.create"
-                  success: (upuj,response) => 
-                    @userPeriodUpdateJob = upuj
-                    @period.destroy
-                      error: logErrorResponse "@period.destroy"
-                      success: => callback()
+        @league = new League
+          statsKey: "8172obdlxiuegldaigsubdliu"
+          basePeriodCategory: "daily"
+        @league.save @league.toJSON(),
+          error: logErrorResponse "@league.save"
+          success: =>
+            periodData = 
+              leagueId: @league.id
+              category: @league.get "basePeriodCategory"
+              startDate: new Date("Feb 11, 2010")
+              endDate: new Date("Feb 12, 2010")
+            periodData.id = Period.getCouchId
+              category: periodData.category
+              date: periodData.startDate
+              leagueStatsKey: @league.get "statsKey"
+            @period = new Period periodData
+            @period.save @period.toJSON(),
+              error: -> logErrorResponse
+              success: (period,response) =>          
+                UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
+                  error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                  success: (userPeriod,response) =>
+                    @userPeriod = userPeriod
+                    UserPeriodUpdateJob.create {userPeriodId:@userPeriod.id},
+                      error: logErrorResponse "UserPeriodUpdateJob.create"
+                      success: (upuj,response) => 
+                        @userPeriodUpdateJob = upuj
+                        @period.destroy
+                          error: logErrorResponse "@period.destroy"
+                          success: => callback()
 
   tearDown: (callback) ->
     @user.destroy
@@ -152,7 +158,11 @@ exports.userPeriodUpdateJobWorkDeletedPeriod =
       success: =>
         @userPeriodUpdateJob.destroy
           error: logErrorResponse "@userPeriodUpdateJob.destroy"
-          success: => callback()
+          success: => 
+            @league.destroy
+              error: logErrorResponse "@league.destroy"
+              success: =>
+                callback()
 
   userPeriodUpdateJobWorkDeletedPeriodTest: (test) ->
     test.ok @userPeriod.id

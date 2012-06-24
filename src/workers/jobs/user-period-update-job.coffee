@@ -34,6 +34,18 @@ module.exports = class UserPeriodUpdateJob extends Job
                 error: options.error
                 success: => options.success @
           success: (model,response) =>
-            console.log "TODO process the user period. update points, achivements, etc."
-            options.success @
+            updatePoints
+              error: options.error
+              success: =>
+                updateAchievements
+                  error: options.error
+                  success: =>
+                    options.success @
 
+  updatePoints: (options) ->
+    console.log "FIXME update UserPeriod points based on picks made"
+    options.sucess @
+
+  updateAchievements: (options) ->
+    console.log "FIXME update UserPeriod achievements based on picks made, past periods"
+    options.success @

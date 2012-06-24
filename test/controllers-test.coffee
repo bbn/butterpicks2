@@ -147,10 +147,11 @@ exports.testUserPeriodGetController =
           success: (model,response) =>
             @periodData = 
               leagueId: @league.id
+              category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 21, 2012")
               endDate: new Date("Jan 22, 2012")
             @periodData.id = Period.getCouchId
-              category: @periodData.category
+              category: @league.get "basePeriodCategory"
               date: @periodData.startDate
               leagueId: @league.id
             @period = new Period(@periodData)
@@ -164,7 +165,9 @@ exports.testUserPeriodGetController =
       success: =>
         @period.destroy
           error: logErrorResponse "destroying period"
-          success: -> callback()
+          success: => 
+            @league.destroy
+              success: => callback()
 
   testUserPeriodGetController: (test) ->
     test.ok @user.id
@@ -186,7 +189,8 @@ exports.testUserPeriodGetController =
             userPeriodData = response.body
             test.equal userPeriodData.id, userPeriod.id
             test.equal userPeriodData.userId, @user.id
-            test.equal userPeriodData.leagueStatsKey, @period.get("league").statsKey
+            test.equal userPeriodData.leagueId, @period.get("leagueId")
+            test.equal userPeriodData.category, @period.get("basePeriodCategory")
             test.equal userPeriodData.periodCategory, @period.get("category")
             test.equal userPeriodData.periodStartDate, @period.get("startDate").toJSON()
             userPeriod.destroy
@@ -214,7 +218,7 @@ exports.testUserPeriodGetController =
             test.equal userPeriodData.length, 1
             userPeriodData = userPeriodData[0]
             test.equal userPeriodData.userId, @user.id
-            test.equal userPeriodData.leagueStatsKey, @period.get("league").statsKey
+            test.equal userPeriodData.leagueId, @period.get("leagueId")
             test.equal userPeriodData.periodCategory, @period.get("category")
             test.equal userPeriodData.periodStartDate, @period.get("startDate").toJSON()
             user2 = new User()

@@ -32,6 +32,7 @@ exports.createUserPeriod =
           success: (league,response) =>
             @periodData = 
               leagueId: @league.id
+              category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 11, 2012")
               endDate: new Date("Jan 12, 2012")
             @periodData.id = Period.getCouchId
@@ -94,6 +95,7 @@ exports.testFetchUserPeriod =
           success: (league,response) =>
             @periodData = 
               leagueId: @league.id
+              category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 11, 2012")
               endDate: new Date("Jan 12, 2012")
             @periodData.id = Period.getCouchId

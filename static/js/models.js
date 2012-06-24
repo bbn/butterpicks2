@@ -3068,13 +3068,17 @@ require.define("/models/period.js", function (require, module, exports, __dirnam
 
     Period.prototype.defaults = {
       doctype: "Period",
-      league: {
-        abbreviation: null,
-        statsKey: null
-      },
+      leagueId: null,
       category: null,
       startDate: null,
       endDate: null
+    };
+
+    Period.prototype.validate = function(attr) {
+      if (!attr.leagueId) return "no leagueId attribute";
+      if (!attr.category) return "no category attribute";
+      if (!attr.startDate) return "no startDate attribute";
+      if (!attr.endDate) return "no endDate attribute";
     };
 
     return Period;

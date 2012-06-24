@@ -7,6 +7,7 @@ Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 require "../lib/model-server-utils"
 Period = models.Period
+League = models.League
 Game = models.Game
 User = models.User
 UserPeriod = models.UserPeriod
@@ -99,31 +100,36 @@ exports.periodUpdateJobQueries =
 exports.periodUpdateJobWork = 
 
   setUp: (callback) ->
-    @periodData = 
-      league:
-        statsKey: "xe2noiuhw9x23i"
-      category: "daily"
-      startDate: new Date("Jan 1, 2011")
-      endDate: new Date("Jan 2, 2011")
-    @periodData.id = Period.getCouchId
-      leagueStatsKey: @periodData.league.statsKey
-      category: @periodData.category
-      withinDate: @periodData.startDate
-    p = new Period(@periodData)
-    p.save p.toJSON(),
-      error: -> logErrorResponse ""
-      success: (model,response) =>
-        @period = model
-
-        #games
-        #user periods
-
-        PeriodUpdateJob.workSuspended = true
-        PeriodUpdateJob.create {periodId:@period.id},
-          error: logErrorResponse ""
+    @league = new League
+      statsKey: "ox8r1diqsaknxkfu"
+      basePeriodCategory: "daily"
+    @league.save @league.toJSON(),
+      error: logErrorResponse "@league.save"
+      success: =>
+        @periodData = 
+          leagueId: @league.id
+          category: @league.get "basePeriodCategory"
+          startDate: new Date("Jan 1, 2011")
+          endDate: new Date("Jan 2, 2011")
+        @periodData.id = Period.getCouchId
+          leagueId: @league.id
+          category: @periodData.category
+          date: @periodData.startDate
+        p = new Period(@periodData)
+        p.save p.toJSON(),
+          error: -> logErrorResponse "p.save"
           success: (model,response) =>
-            @periodUpdateJob = model
-            callback()
+            @period = model
+
+            #games
+            #user periods
+
+            PeriodUpdateJob.workSuspended = true
+            PeriodUpdateJob.create {periodId:@period.id},
+              error: logErrorResponse ""
+              success: (model,response) =>
+                @periodUpdateJob = model
+                callback()
 
   tearDown: (callback) ->
     @period.destroy
@@ -135,7 +141,9 @@ exports.periodUpdateJobWork =
         @periodUpdateJob.destroy
           error: logErrorResponse ""
           success: =>
-            callback()
+            @league.destroy
+              success: =>
+                callback()
 
   periodUpdateJobWorkTest: (test) ->
     test.ok @period
@@ -153,7 +161,7 @@ exports.periodUpdateJobWork =
           success: (user,response) =>
             UserPeriod.createForUserAndPeriod {userId:user.id,periodId:@period.id},
               error: logErrorResponse "UserPeriod.createForUserAndPeriod"
-              success: (user,response) =>
+              success: (userPeriod,response) =>
                 @periodUpdateJob.work
                   error: logErrorResponse "periodUpdateJob.work 2 error"
                   success: (model,response) =>
@@ -169,4 +177,10 @@ exports.periodUpdateJobWork =
                               error: logErrorResponse "UserPeriodUpdateJob.getNext 2"
                               success: (job,response) =>
                                 test.equal job,null,"all jobs deleted"
-                                test.done()
+                                userPeriod.destroy
+                                  error: logErrorResponse
+                                  success: =>
+                                    user.destroy
+                                      error: logErrorResponse "user.destroy"
+                                      success: =>
+                                        test.done()
