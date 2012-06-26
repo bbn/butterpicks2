@@ -246,6 +246,26 @@ UserPeriod.fetchForUserAndLeague = (params,options) ->
     options.success userPeriods
 
 
+UserPeriod::fetchPicks = (options) ->
+  return options.error("games not loaded") unless @games
+  return options.success([]) unless @games.length
+  picks = []
+  errorReturned = false
+  for game in @games
+    do (game) =>
+      Pick.fetchForUserAndGame {userId:@get("userId"),gameId:game.id},
+        error: (_,response) =>
+          options.error(response) unless errorReturned
+          errorReturned = true
+        success: (pick) =>
+          return if errorReturned
+          pick.game = game
+          pick.user = @user if @user
+          picks.push(pick)
+          options.success(picks) if picks.length == @games.length
+
+
+
 Pick.getCouchId = (params) ->
   return null unless params.userId and params.gameId
   "#{params.userId}_#{params.gameId}"

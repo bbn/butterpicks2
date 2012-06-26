@@ -3000,8 +3000,7 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
         home: 0,
         away: 0,
         draw: 0
-      },
-      basePeriodKey: null
+      }
     };
 
     Game.prototype.secondsUntilDeadline = function() {
@@ -3308,10 +3307,13 @@ require.define("/models/user-period.js", function (require, module, exports, __d
       periodStartDate: null,
       periodCategory: null,
       leagueStatsKey: null,
-      picks: null,
       points: 0,
       prizes: null
     };
+
+    UserPeriod.prototype.user = null;
+
+    UserPeriod.prototype.period = null;
 
     return UserPeriod;
 

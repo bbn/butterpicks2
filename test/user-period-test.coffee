@@ -9,6 +9,8 @@ User = models.User
 League = models.League
 Period = models.Period
 UserPeriod = models.UserPeriod
+Game = models.Game
+Pick = models.Pick
 
 
 logErrorResponse = (message) ->
@@ -147,4 +149,120 @@ exports.testFetchUserPeriod =
         test.equal userPeriod.get("leagueId"), @period.get("leagueId")
         test.equal userPeriod.get("periodStartDate").toJSON(), @period.get("startDate").toJSON()
         test.equal userPeriod.get("periodCategory"), @period.get("category")
+        test.done()
+
+
+exports.testFetchPicks = 
+
+  setUp: (callback) ->
+    @league = new League
+      statsKey: "sadkjhskjahdsA"
+      basePeriodCategory: "daiy"
+    @league.save @league.toJSON(),
+      success: =>
+        @periodData = 
+          leagueId: @league.id
+          category: @league.get "basePeriodCategory"
+          startDate: new Date("Mar 11, 2012")
+          endDate: new Date("Mar 12, 2012")
+        @periodData.id = Period.getCouchId
+          category: @league.get("basePeriodCategory")
+          date: @periodData.startDate
+          leagueStatsKey: @league.get("statsKey")
+        @period = new Period(@periodData)
+        @period.save @period.toJSON(),
+          success: =>
+            @user = new User
+            @user.save @user.toJSON(),
+              success: =>
+                UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
+                  success: (userPeriod) =>
+                    @userPeriod = userPeriod
+                    @game1 = new Game
+                      statsKey: "khjgkjgb87o"
+                      leagueId: @league.id
+                      awayTeam:
+                        statsKey: "oinli2uh3xq"
+                      homeTeam:
+                        statsKey: "akwhxo89i2uhkjwx"
+                      startDate: @period.get("startDate").add({hours:1})
+                      status:
+                        score:
+                          away: 1
+                          home: 0
+                        text: "final"
+                        final: true
+                      pickCount:
+                        home: 100
+                        away: 50
+                        draw: 0
+                    @game1.save @game1.toJSON(),
+                      success: =>
+                        @game2 = new Game
+                          statsKey: "p298qywihkjacs"
+                          leagueId: @league.id
+                          awayTeam:
+                            statsKey: "2qgwjbs"
+                          homeTeam:
+                            statsKey: "cnbq27iwugjbs"
+                          startDate: @period.get("startDate").add({hours:3})
+                          status:
+                            score:
+                              away: 2
+                              home: 4
+                            text: "final"
+                            final: true
+                          pickCount:
+                            home: 80
+                            away: 27
+                            draw: 0
+                        @game2.save @game2.toJSON(),
+                          success: =>  
+                            pickParams = 
+                              userId: @user.id
+                              gameId: @game1.id
+                              home: true
+                              away: false
+                              draw: false
+                              butter: false
+                              createdDate: @game1.get("startDate").add({hours:-1})
+                              updatedDate: @game1.get("startDate").add({hours:-1})
+                            Pick.create pickParams,
+                              success: (pick1) =>
+                                @pick1 = pick1
+                                pickParams.gameId = @game2.id
+                                pickParams.home = false
+                                pickParams.away = true                  
+                                Pick.create pickParams,
+                                  success: (pick2) =>
+                                    @pick2 = pick2
+                                    callback()
+
+  tearDown: (callback) ->
+    @pick2.destroy
+      success: => @pick1.destroy
+        success: => @game2.destroy
+          success: => @game1.destroy
+            success: => @userPeriod.destroy
+              success: => @user.destroy
+                success: => @period.destroy
+                  success: => @league.destroy
+                    success: => callback()
+
+  testFetchPicks: (test) ->
+    test.ok @league.id
+    test.ok @period.id
+    test.ok @user.id
+    test.ok @userPeriod.id
+    test.ok @game1.id
+    test.ok @game2.id
+    test.ok @pick1.id
+    test.ok @pick2.id
+    @userPeriod.games = [@game1,@game2]
+    @userPeriod.fetchPicks
+      error: logErrorResponse "@userPeriod.fetchPicks"
+      success: (picks) =>
+        test.equal picks.length, 2
+        for pick in picks
+          test.ok pick.game
         test.done()

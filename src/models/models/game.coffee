@@ -30,7 +30,6 @@ module.exports = class Game extends Backbone.Model
       home: 0
       away: 0
       draw: 0
-    basePeriodKey: null
 
 
   secondsUntilDeadline: ->

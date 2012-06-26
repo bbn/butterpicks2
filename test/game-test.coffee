@@ -28,6 +28,8 @@ logErrorResponse = (message) ->
     console.log "#{message} -> response: #{require('util').inspect response}"
 
 
+console.log "TODO replace team info with teamId, reference to specific team model"
+
 exports.couchViewForMostRecentlyUpdatedGame = (test) ->
   gameUpdater.getMostRecentlyUpdatedGameDate
     error: logErrorResponse
@@ -199,7 +201,6 @@ exports.testGamePostUpdate =
             home: 2536
             away: 1234
             draw: null
-          basePeriodKey: "o2enx1khad89"
         g = new Game(@gameData)
         g.save g.toJSON(),
           error: logErrorResponse
@@ -264,7 +265,6 @@ exports.testGamePostUpdate =
       test.equal gameData.pickCount.away,@gameData.pickCount.away
       test.equal gameData.pickCount.draw,@gameData.pickCount.draw
       test.ok gameData.id
-      test.ok gameData.basePeriodKey 
       PeriodUpdateJob.getNext
         limit: 2
         error: logErrorResponse

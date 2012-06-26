@@ -6,9 +6,10 @@ bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 require "../lib/model-server-utils"
-Period = models.Period
-Game = models.Game
 User = models.User
+Game = models.Game
+Pick = models.Pick
+Period = models.Period
 UserPeriod = models.UserPeriod
 League = models.League
 
@@ -177,3 +178,162 @@ exports.userPeriodUpdateJobWorkDeletedPeriod =
           error: (_,response) =>
             test.equal response.status_code,404,"userPeriod should be gone"
             test.done()
+
+
+exports.userPeriodUpdateJobWorkUpdatePoints = 
+
+  setUp: (callback) ->
+    UserPeriodUpdateJob.workSuspended = true
+    @user = new User()
+    @user.save @user.toJSON(),
+      error: logErrorResponse "@user.save"
+      success: =>
+        @league = new League
+          statsKey: "xhi3hf3fln389"
+          basePeriodCategory: "daily"
+        @league.save @league.toJSON(),
+          error: logErrorResponse "@league.save"
+          success: =>
+            periodData = 
+              leagueId: @league.id
+              category: @league.get "basePeriodCategory"
+              startDate: new Date("Feb 11, 2010")
+              endDate: new Date("Feb 12, 2010")
+            periodData.id = Period.getCouchId
+              category: periodData.category
+              date: periodData.startDate
+              leagueStatsKey: @league.get "statsKey"
+            @period = new Period periodData
+            @period.save @period.toJSON(),
+              error: -> logErrorResponse
+              success: (period,response) =>          
+                UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
+                  error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                  success: (userPeriod,response) =>
+                    @userPeriod = userPeriod
+                    UserPeriodUpdateJob.create {userPeriodId:@userPeriod.id},
+                      error: logErrorResponse "UserPeriodUpdateJob.create"
+                      success: (upuj,response) => 
+                        @userPeriodUpdateJob = upuj
+                        @game1 = new Game
+                          statsKey: "daos8xliu"
+                          leagueId: @league.id
+                          awayTeam:
+                            statsKey: "12dsklalds"
+                          homeTeam:
+                            statsKey: "asjklhnp928x"
+                          startDate: @period.get("startDate").add({hours:1})
+                          status:
+                            score:
+                              away: 1
+                              home: 0
+                            text: "final"
+                            final: true
+                          pickCount:
+                            home: 100
+                            away: 50
+                            draw: 0
+                        @game1.save @game1.toJSON(),
+                          error: logErrorResponse "game1.save"
+                          success: (game1) =>
+                            pickParams = 
+                              userId: @user.id
+                              gameId: @game1.id
+                              home: false
+                              away: true
+                              draw: false
+                              butter: false
+                              createdDate: new Date("Feb 9, 2010")
+                              updatedDate: new Date("Feb 9, 2010")
+                            Pick.create pickParams,
+                              success: (pick1) =>
+                                @pick1 = pick1
+                                callback()
+
+  tearDown: (callback) ->
+    @user.destroy
+      error: logErrorResponse "@user.destroy"
+      success: =>
+        @userPeriodUpdateJob.destroy
+          error: logErrorResponse "@userPeriodUpdateJob.destroy"
+          success: => 
+            @league.destroy
+              error: logErrorResponse "@league.destroy"
+              success: =>
+                @game1.destroy
+                  success: =>
+                    @pick1.destroy
+                      success: =>                          
+                        @userPeriod.fetch
+                          error: logErrorResponse "@userPeriod.fetch"
+                          success: (userPeriod) =>
+                            userPeriod.destroy
+                              error: logErrorResponse "@userPeriod.destroy"
+                              success: =>
+                                @period.destroy
+                                  success: =>
+                                    callback()
+
+  userPeriodUpdateJobWorkDeletedPeriodTest: (test) ->
+    test.ok @userPeriod.id
+    test.ok @userPeriodUpdateJob.id
+    @userPeriodUpdateJob.work
+      error: logErrorResponse "userPeriodUpdateJob.work error"
+      success: (model,response) =>
+        test.equal model.id, @userPeriodUpdateJob.id, "oioioi"
+        userPeriod = new UserPeriod {id:@userPeriod.id}
+        userPeriod.fetch
+          error: logErrorResponse "userPeriod.fetch"
+          success: (userPeriod) =>
+            test.ok userPeriod
+            test.equal userPeriod.id, @userPeriod.id
+            test.equal userPeriod.get("points"), 100
+
+            game2 = new Game
+              statsKey: "rdvftyguhijk"
+              leagueId: @league.id
+              awayTeam:
+                statsKey: "w45rtdguligkhj"
+              homeTeam:
+                statsKey: "rue5r6ituigh"
+              startDate: @period.get("startDate").add({hours:3})
+              status:
+                score:
+                  home: 3
+                  away: 1
+                text: "3rd period"
+                final: false
+              pickCount:
+                home: 33
+                away: 66
+                draw: 0
+            game2.save game2.toJSON(),
+              error: logErrorResponse "game2.save"
+              success: (game2) =>
+                test.ok game2.id
+                pickParams = 
+                  userId: @user.id
+                  gameId: game2.id
+                  home: true
+                  away: false
+                  draw: false
+                  butter: false
+                  createdDate: new Date("Feb 7, 2010")
+                  updatedDate: new Date("Feb 8, 2010")
+                Pick.create pickParams,
+                  success: (pick2) =>
+                    test.ok pick2.id
+                    @userPeriodUpdateJob.work
+                      error: logErrorResponse "userPeriodUpdateJob.work 2 error"
+                      success: (model,response) =>
+                        test.equal model.id, @userPeriodUpdateJob.id
+                        @userPeriod.fetch
+                          error: logErrorResponse "@userPeriod.fetch"
+                          success: (userPeriod) =>
+                            test.ok userPeriod
+                            test.equal userPeriod.id, @userPeriod.id
+                            test.equal userPeriod.get("points"), 100
+                            pick2.destroy
+                              success: => game2.destroy
+                                success: =>
+                                  test.done()

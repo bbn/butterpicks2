@@ -28,23 +28,38 @@ module.exports = class UserPeriodUpdateJob extends Job
         @period = new Period {id:@userPeriod.get("periodId")}
         @period.fetch
           error: (model,response) =>
-            console.log "TODO - instead of deleting, flag periods and user periods as invalid"
-            if response.status_code == 404
-              @userPeriod.destroy
-                error: options.error
-                success: => options.success @
+            return options.error(response) unless response.status_code == 404
+            console.log "CONSIDER: instead of deleting, flag periods and user periods as invalid"
+            @userPeriod.destroy
+              error: options.error
+              success: => options.success @
           success: (model,response) =>
-            updatePoints
+            @updatePoints
               error: options.error
               success: =>
-                updateAchievements
+                @updateAchievements
                   error: options.error
                   success: =>
                     options.success @
 
   updatePoints: (options) ->
-    console.log "FIXME update UserPeriod points based on picks made"
-    options.sucess @
+    @period.fetchGames
+      error: options.error
+      success: (games) =>
+        return options.error("zero games for period #{@period.id}") unless games.length
+        @userPeriod.games = games
+        @userPeriod.fetchPicks
+          error: options.error
+          success: (picks) =>
+            points = 0
+            (points += pick.points()) for pick in picks
+            console.log "#{points} calculated"
+            return options.success(@) if points == @userPeriod.get("points")
+            @userPeriod.save {points:points},
+              error: options.error
+              success: (userPeriod) =>
+                @userPeriod = userPeriod                
+                options.success @
 
   updateAchievements: (options) ->
     console.log "FIXME update UserPeriod achievements based on picks made, past periods"
