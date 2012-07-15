@@ -62,11 +62,14 @@ task 'freshtest', 'Run tests, wiping test db first', (options) ->
       updateDesignDocuments {update:true,silent:true}, (err,_) ->
         invoke "test"
 
+option '-tf', '--testfile [FILE]', 'test file to run'
 
 task 'test', 'Run tests', (options) ->
   process.env.testing = true
   process.env.testingDbName = 'picks-testing'
-  tests = spawn "./node_modules/nodeunit/bin/nodeunit", ['test']
+  testfiles = ['test']
+  testfiles = [options.testfile] if options.testfile
+  tests = spawn "./node_modules/nodeunit/bin/nodeunit", testfiles
   tests.stderr.on 'data', (data) ->
     process.stderr.write data.toString()
   tests.stdout.on 'data', (data) ->
