@@ -8,6 +8,10 @@ module.exports = class Period extends Backbone.Model
     category : null
     startDate : null
     endDate : null
+    final : false
+
+  games: null
+  userPeriods: null
 
   validate: (attr) ->
     return "no leagueId attribute" unless attr.leagueId

@@ -120,32 +120,23 @@ exports.periodUpdateJobWork =
           error: -> logErrorResponse "p.save"
           success: (model,response) =>
             @period = model
-
-            #games
-            #user periods
-
             PeriodUpdateJob.workSuspended = true
             PeriodUpdateJob.create {periodId:@period.id},
-              error: logErrorResponse ""
+              error: logErrorResponse "PeriodUpdateJob.create"
               success: (model,response) =>
                 @periodUpdateJob = model
                 callback()
 
   tearDown: (callback) ->
-    @period.destroy
-      error: logErrorResponse ""
+    @periodUpdateJob.destroy
+      error: logErrorResponse "periodUpdateJob.destroy"
       success: =>
-        #delete games
-        #delete user periods
-        return callback() unless @periodUpdateJob
-        @periodUpdateJob.destroy
-          error: logErrorResponse ""
+        @league.destroy
           success: =>
-            @league.destroy
-              success: =>
-                callback()
+            callback()
 
-  periodUpdateJobWorkTest: (test) ->
+
+  periodUpdateJobWorkDeleteTest: (test) ->
     test.ok @period
     test.ok @period.id
     test.ok @periodUpdateJob
@@ -155,6 +146,49 @@ exports.periodUpdateJobWork =
       error: logErrorResponse "periodUpdateJob.work error"
       success: (model,response) =>
         test.equal model.id, @periodUpdateJob.id
+        @period.fetch
+          success: logErrorResponse "unexpected!"
+          error: (_,response) =>
+            test.equal response.status_code,404
+            test.done()
+
+
+
+  periodUpdateJobWorkUpdateTest: (test) ->
+    test.ok @period
+    test.ok @period.id
+    test.ok @periodUpdateJob
+    test.ok @periodUpdateJob.id
+    UserPeriodUpdateJob.workSuspended = true
+    @gameData =
+      statsKey: 'u1t2fhlajskhckjash'
+      id: 'game_u1t2fhlajskhckjash'
+      statsLatestUpdateDate: new Date("Jan 1, 2011, 13:00")
+      leagueId: @league.id
+      awayTeam: 
+        statsKey: '1267bidwyqugksa'
+        location: 'Chicago'
+        name: 'Cubs'
+      homeTeam: 
+        statsKey: '127o8qgulbja'
+        location: 'Boston'
+        name: 'Red Sox'
+      startDate: new Date("Jan 1, 2011, 12:00")
+      status:
+        score: 
+          home: 72
+          away: 1
+        text: '2nd inning'
+        final: false
+      legit: true
+      pickCount:
+        home: 2536
+        away: 1234
+        draw: null
+    @game = new Game(@gameData)
+    @game.save @game.toJSON(),
+      error: logErrorResponse "@game.save"
+      success: =>
         user = new User()
         user.save user.toJSON(),
           error: logErrorResponse "user.save"
@@ -163,24 +197,35 @@ exports.periodUpdateJobWork =
               error: logErrorResponse "UserPeriod.createForUserAndPeriod"
               success: (userPeriod,response) =>
                 @periodUpdateJob.work
-                  error: logErrorResponse "periodUpdateJob.work 2 error"
+                  error: logErrorResponse "@periodUpdateJob.work"
                   success: (model,response) =>
                     test.equal model.id, @periodUpdateJob.id
-                    UserPeriodUpdateJob.getNext
-                      error: logErrorResponse "UserPeriodUpdateJob.getNext"
-                      success: (job,response) =>
-                        test.ok job
-                        job.destroy
-                          error: logErrorResponse "deleting UserPeriodUpdateJob"
-                          success: =>
-                            UserPeriodUpdateJob.getNext
-                              error: logErrorResponse "UserPeriodUpdateJob.getNext 2"
-                              success: (job,response) =>
-                                test.equal job,null,"all jobs deleted"
-                                userPeriod.destroy
-                                  error: logErrorResponse
-                                  success: =>
-                                    user.destroy
-                                      error: logErrorResponse "user.destroy"
+                    @period.fetch
+                      error: logErrorResponse "@period.fetch"
+                      success: =>
+                        test.ok @period.id
+                        test.equal @period.get("final"),false
+                        UserPeriodUpdateJob.getNext
+                          error: logErrorResponse "UserPeriodUpdateJob.getNext"
+                          success: (job,response) =>
+                            test.ok job
+                            job.destroy
+                              error: logErrorResponse "deleting UserPeriodUpdateJob"
+                              success: =>
+                                UserPeriodUpdateJob.getNext
+                                  error: logErrorResponse "UserPeriodUpdateJob.getNext 2"
+                                  success: (job,response) =>
+                                    test.equal job,null,"all jobs deleted"
+                                    userPeriod.destroy
+                                      error: logErrorResponse "userPeriod.destroy"
                                       success: =>
-                                        test.done()
+                                        user.destroy
+                                          error: logErrorResponse "user.destroy"
+                                          success: =>
+                                            @game.destroy
+                                              error: logErrorResponse "@game.destroy"
+                                              success: =>
+                                                @period.destroy
+                                                  error: logErrorResponse "@period.destroy"
+                                                  success: =>
+                                                    test.done()

@@ -60,3 +60,5 @@ module.exports = class Game extends Backbone.Model
     return null unless status.final
     status.score.away == status.score.home
 
+  final: ->
+    @get("status").final

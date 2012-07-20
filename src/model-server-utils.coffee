@@ -9,6 +9,7 @@ Period = models.Period
 UserPeriod = models.UserPeriod
 Pick = models.Pick
 ButterTransaction = models.ButterTransaction
+Prize = models.Prize
 
 workers = require "./workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -44,6 +45,34 @@ User::fetchButterTransactions = (options) ->
     return options.success([],headers) unless body.rows
     trannies = ((new ButterTransaction(row.doc)) for row in body.rows)
     options.success trannies
+
+
+
+User::fetchMetrics = (options) ->
+  leagueId = options.leagueId or options.league.id
+  startDate = if options.startDate then options.startDate.toJSON() else '1970-01-01T00:00:00.000Z'
+  endDate = if options.endDate then options.endDate.toJSON() else '2070-01-01T00:00:00.000Z'
+  viewParams = 
+    reduce: true
+    startkey: [@id,leagueId,startDate]
+    endkey: [@id,leagueId,endDate]
+  couch.db.view "userPeriods","metricsByUserIdAndLeagueIdAndDate", viewParams, (err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success({}) unless body.rows[0]
+    options.success body.rows[0].value
+
+  # idea is to retrieve all metrics before the given date.
+
+  # exampleMetrics = 
+  #   pickCount: 213
+  #   correctPickCount: 168
+  #   riskCount: 33
+  #   successfulRiskCount: 25
+  #   prizes: [
+  #     { id: 'adsljhkl', count:1 }
+  #     { id: '278ubkjsa', count: 3 }
+  #     { id: 'sadsasad', count: 1}
+  #   ]
 
 
 Game::getCouchId = ->
@@ -132,6 +161,30 @@ Game::fetchBasePeriodId = (options) ->
       options.success id
 
 
+
+Pick.getCouchId = (params) ->
+  return null unless params.userId and params.gameId
+  "#{params.userId}_#{params.gameId}"
+
+
+Pick.create = (params,options) ->
+  return options.error("userId, gameId params plz") unless params.gameId and params.userId
+  pick = new Pick(params)
+  d = new Date()
+  pick.set 
+    id:Pick.getCouchId params
+    createdDate: d
+    updatedDate: d
+  pick.save pick.toJSON(),options
+
+
+Pick.fetchForUserAndGame = (params,options) ->
+  pickId = Pick.getCouchId params
+  pick = new Pick { id: pickId }
+  pick.fetch options
+
+
+
 Period.getCouchId = (params) ->
   switch params.category
     when "daily"
@@ -173,28 +226,20 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
 
 
 Period::fetchGames = (options) ->
+  return process.nextTick(-> options.success @games) if @games
   viewParams =
     startkey: [@get("leagueId"), @get("startDate").toJSON()]
     endkey:   [@get("leagueId"), @get("endDate").toJSON()]
     include_docs: true
-  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) ->
+  couch.db.view "games","byLeagueAndStartDate", viewParams, (err,body,headers) =>
     return options.error(null,err) if err
     return options.success([],headers) unless body.rows
-    games = ((new Game(row.doc)) for row in body.rows)
-    options.success games
+    @games = ((new Game(row.doc)) for row in body.rows)
+    options.success @games
 
 
 Period::fetchUserPeriods = (options) ->
-  viewParams =
-    descending: true
-    startkey: [@.id, 99999999999]
-    endkey:   [@.id, -99999999999]
-    include_docs: true
-  couch.db.view "userPeriods","byPeriodIdAndPoints", viewParams, (err,body,headers) ->
-    return options.error(null,err) if err
-    return options.success([],headers) unless body.rows
-    userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
-    options.success userPeriods
+  UserPeriod.fetchForPeriod {periodId:@id,descending:true}, options
 
 
 UserPeriod.getCouchId = (params) ->
@@ -218,17 +263,19 @@ UserPeriod.createForUserAndPeriod = (params,options) ->
         periodStartDate: p.get("startDate")
         periodCategory: p.get("category")
         userId: params.userId
+        metrics:
+          points: 0
       userPeriod.save userPeriod.toJSON(), options
 
 UserPeriod.fetchForPeriod = (params,options) ->
-  high = [params.periodId, 999999999999]
-  low = [params.periodId, -999999999999]
+  high = [params.periodId, "points", 999999999999]
+  low = [params.periodId, "points", -999999999999]
   viewParams =
     descending: (if params.descending then true else false)
     startkey: (if params.descending then high else low)
     endkey:   (if params.descending then low else high)
     include_docs: true
-  couch.db.view "userPeriods","byPeriodIdAndPoints", viewParams, (err,body,headers) ->
+  couch.db.view "userPeriods","byPeriodIdAndMetric", viewParams, (err,body,headers) ->
     return options.error(null,err) if err
     return options.success([],headers) unless body.rows
     userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
@@ -245,44 +292,113 @@ UserPeriod.fetchForUserAndLeague = (params,options) ->
     userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
     options.success userPeriods
 
+UserPeriod::fetchPeriod = (options) ->
+  return process.nextTick(-> options.success @period) if @period
+  period = new Period {id:@get("periodId")}
+  period.fetch
+    error: options.error
+    success: (period) =>
+      @period = period
+      options.success @period
+
+UserPeriod::fetchGames = (options) ->
+  return process.nextTick(-> options.success @games) if @games
+  @fetchPeriod
+    error: options.error
+    success: (period) =>
+      @period.fetchGames
+        error: options.error
+        success: (games) =>
+          @games = games
+          options.success @games
 
 UserPeriod::fetchPicks = (options) ->
-  return options.error("games not loaded") unless @games
-  return options.success([]) unless @games.length
-  picks = []
-  errorReturned = false
-  for game in @games
-    do (game) =>
-      Pick.fetchForUserAndGame {userId:@get("userId"),gameId:game.id},
-        error: (_,response) =>
-          options.error(response) unless errorReturned
-          errorReturned = true
-        success: (pick) =>
-          return if errorReturned
-          pick.game = game
-          pick.user = @user if @user
-          picks.push(pick)
-          options.success(picks) if picks.length == @games.length
+  @fetchGames
+    error: options.error
+    success: (games) =>
+      @games = games
+      return options.success([]) unless @games.length
+      picks = []
+      errorReturned = false
+      # TODO the below is bad - so many DB accesses. collect into a single view!
+      for game in @games
+        do (game) =>
+          Pick.fetchForUserAndGame {userId:@get("userId"),gameId:game.id},
+            error: (__,response) =>
+              options.error(response) unless errorReturned
+              errorReturned = true
+            success: (pick) =>
+              return if errorReturned
+              pick.game = game
+              pick.user = @user if @user
+              picks.push(pick)
+              if picks.length == @games.length
+                @picks = picks
+                options.success @picks
+
+
+UserPeriod::fetchMetrics = (options) ->
+  @fetchPicks
+    error: options.error
+    success: (picks) =>
+      metrics =
+        # games: @games.length
+        # allGamesFinal: _(@games).filter((game)-> game.final()).size() == @games.length
+        picks: _(picks).size()
+        unfinalizedPicks: _(picks).filter((pick)-> not pick.final()).size()
+        homePicks: _(picks).filter((pick)-> pick.get("home")).size()
+        awayPicks: _(picks).filter((pick)-> pick.get("away")).size()
+        drawPicks: _(picks).filter((pick)-> pick.get("draw")).size()
+        uselessPicks: _(picks).filter((pick)-> pick.useless()).size() + @games.length - _(picks).size()
+        predictions: _(picks).filter((pick)-> pick.prediction()).size()
+        correctPredictions: _(picks).filter((pick)-> pick.correctPrediction()).size()
+        incorrectPredictions: _(picks).filter((pick)-> pick.incorrectPrediction()).size()
+        risks: _(picks).filter((pick)-> pick.risk()).size()
+        correctRisks: _(picks).filter((pick)-> pick.correctRisk()).size()
+        incorrectRisks: _(picks).filter((pick)-> pick.incorrectRisk()).size()
+        safeties: _(picks).filter((pick)-> pick.safety()).size()
+        butters: _(picks).filter((pick)-> pick.get("butter")).size()
+        points: _(picks).reduce (memo,pick) -> memo + pick.points()
 
 
 
-Pick.getCouchId = (params) ->
-  return null unless params.userId and params.gameId
-  "#{params.userId}_#{params.gameId}"
 
 
-Pick.create = (params,options) ->
-  return options.error("userId, gameId params plz") unless params.gameId and params.userId
-  pick = new Pick(params)
-  d = new Date()
-  pick.set 
-    id:Pick.getCouchId params
-    createdDate: d
-    updatedDate: d
-  pick.save pick.toJSON(),options
+UserPeriod::determinePrizes = (options) ->
+  return options.error("no user loaded") unless @user
+  return options.error("no period loaded") unless @period
+  return options.error("no period.games loaded") unless options.games or (@period and @period.games)
+  return options.error("no picks loaded") unless @picks
+  Prize.fetchAllForLeague {id:@leagueId},
+    error: options.error
+    success: (prizes) =>
+      @metrics = {}
+      @user.fetchMetrics 
+        endDate: @periodstartDate
+        leagueId: @leagueId
+        error: options.error
+        success: (userMetrics) =>
+          _(@metrics).extend userMetrics
+          @period.fetchMetrics
+            error: options.error
+            success: (periodMetrics) =>
+              _(@metrics).extend periodMetrics
+              @fetchMetrics
+                error: options.error
+                success: (userPeriodMetrics) =>
+                  _(@metrics).extend userPeriodMetrics
+                  for prize in prizes
+                    prize.currentStatus = 
+                      eligible: prize.eligible @metrics
+                      possible: prize.possible @metrics
+                      success:  prize.success  @metrics
+                  options.success prizes
 
 
-Pick.fetchForUserAndGame = (params,options) ->
-  pickId = Pick.getCouchId params
-  pick = new Pick { id: pickId }
-  pick.fetch options
+
+Prize.fetchAllForLeague = (league,options) ->
+  couch.db.view "prizes","byLeagueId",{key:league.id,include_docs:true},(err,body,headers) ->
+    return options.error(null,err) if err
+    return options.success([],headers) unless body.rows.length
+    prizes = ((new Prize(row.doc)) for row in body.rows)
+    options.success prizes

@@ -8,6 +8,8 @@ module.exports = class User extends Backbone.Model
     email: null
     createdDate: new Date()
 
+  prizes: null
+
 
   #  loadData : function(callback) {
   #    var self = this;

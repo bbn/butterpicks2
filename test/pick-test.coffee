@@ -7,6 +7,7 @@ Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
+require "../lib/model-server-utils"
 Game = models.Game
 User = models.User
 Pick = models.Pick
@@ -23,13 +24,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), true
   test.equal pick.final(), false
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), false
+  test.equal pick.prediction(), false
   test.equal pick.safety(), false
   test.equal pick.risk(), false
   test.equal pick.useless(), true
-  test.equal pick.correctPredictionMade(), null
-  test.equal pick.incorrectPredictionMade(), null
-  test.equal pick.incorrectRiskMade(), null
+  test.equal pick.correctPrediction(), null
+  test.equal pick.incorrectPrediction(), null
+  test.equal pick.incorrectRisk(), null
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),1
   test.equal pick.awayValue(),1
@@ -59,13 +60,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), false
   test.equal pick.final(), true
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), false
+  test.equal pick.prediction(), false
   test.equal pick.safety(), false
   test.equal pick.risk(), false
   test.equal pick.useless(), true
-  test.equal pick.correctPredictionMade(), false
-  test.equal pick.incorrectPredictionMade(), false
-  test.equal pick.incorrectRiskMade(), false
+  test.equal pick.correctPrediction(), false
+  test.equal pick.incorrectPrediction(), false
+  test.equal pick.incorrectRisk(), false
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),44
   test.equal pick.awayValue(),99
@@ -83,13 +84,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), false
   test.equal pick.final(), true
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), true
+  test.equal pick.prediction(), true
   test.equal pick.safety(), false
   test.equal pick.risk(), false
   test.equal pick.useless(), false
-  test.equal pick.correctPredictionMade(), true
-  test.equal pick.incorrectPredictionMade(), false
-  test.equal pick.incorrectRiskMade(), false
+  test.equal pick.correctPrediction(), true
+  test.equal pick.incorrectPrediction(), false
+  test.equal pick.incorrectRisk(), false
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),44
   test.equal pick.awayValue(),99
@@ -109,13 +110,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), false
   test.equal pick.final(), true
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), true
+  test.equal pick.prediction(), true
   test.equal pick.safety(), false
   test.equal pick.risk(), true
   test.equal pick.useless(), false
-  test.equal pick.correctPredictionMade(), true
-  test.equal pick.incorrectPredictionMade(), false
-  test.equal pick.incorrectRiskMade(), false
+  test.equal pick.correctPrediction(), true
+  test.equal pick.incorrectPrediction(), false
+  test.equal pick.incorrectRisk(), false
   test.equal pick.multiplier(),2
   test.equal pick.homeValue(),88
   test.equal pick.awayValue(),198
@@ -136,13 +137,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), false
   test.equal pick.final(), true
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), true
+  test.equal pick.prediction(), true
   test.equal pick.safety(), false
   test.equal pick.risk(), false
   test.equal pick.useless(), false
-  test.equal pick.correctPredictionMade(), false
-  test.equal pick.incorrectPredictionMade(), true
-  test.equal pick.incorrectRiskMade(), false
+  test.equal pick.correctPrediction(), false
+  test.equal pick.incorrectPrediction(), true
+  test.equal pick.incorrectRisk(), false
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),44
   test.equal pick.awayValue(),99
@@ -159,7 +160,7 @@ exports.modelTests = (test) ->
   pick.set
     butter:true
   test.equal pick.risk(), true
-  test.equal pick.incorrectRiskMade(), true
+  test.equal pick.incorrectRisk(), true
   test.equal pick.multiplier(),2
   test.equal pick.homeValue(),88
   test.equal pick.awayValue(),198
@@ -175,13 +176,13 @@ exports.modelTests = (test) ->
     butter:true
     home:false
     away:false
-  test.equal pick.predictionMade(), false
+  test.equal pick.prediction(), false
   test.equal pick.safety(), true
   test.equal pick.risk(), false
   test.equal pick.useless(), false
-  test.equal pick.correctPredictionMade(), false
-  test.equal pick.incorrectPredictionMade(), false
-  test.equal pick.incorrectRiskMade(), false
+  test.equal pick.correctPrediction(), false
+  test.equal pick.incorrectPrediction(), false
+  test.equal pick.incorrectRisk(), false
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),44
   test.equal pick.awayValue(),99
@@ -202,13 +203,13 @@ exports.modelTests = (test) ->
   test.equal pick.editable(), true
   test.equal pick.final(), false
   test.equal pick.couldDraw(), false
-  test.equal pick.predictionMade(), false
+  test.equal pick.prediction(), false
   test.equal pick.safety(), true
   test.equal pick.risk(), false
   test.equal pick.useless(), false
-  test.equal pick.correctPredictionMade(), null
-  test.equal pick.incorrectPredictionMade(), null
-  test.equal pick.incorrectRiskMade(), null
+  test.equal pick.correctPrediction(), null
+  test.equal pick.incorrectPrediction(), null
+  test.equal pick.incorrectRisk(), null
   test.equal pick.multiplier(),1
   test.equal pick.homeValue(),44
   test.equal pick.awayValue(),99

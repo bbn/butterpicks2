@@ -35,16 +35,50 @@ couch.designDocs =
         map: "function (doc) { if (doc.doctype=='Period') emit([doc.leagueId,doc.category,doc.startDate,doc.endDate],null); }"
   userPeriods:
     views:
-      byPeriodIdAndPoints:
-        map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.periodId,doc.points],null); }"
+      byPeriodIdAndMetric:
+        map: "function (doc) { 
+                if (doc.doctype=='UserPeriod') {
+                  if (doc.metrics) {
+                    for (var k in doc.metrics) {
+                      emit([doc.periodId,k,doc.metrics[k]],null);
+                    }                    
+                  }
+                }
+              }"
       byUserIdAndLeagueAndDate:
         map: "function (doc) { if (doc.doctype=='UserPeriod') emit([doc.userId,doc.leagueId,doc.periodStartDate],null); }"
+      metricsByUserIdAndLeagueIdAndDate:
+        map: "function (doc) {
+                if (doc.doctype=='UserPeriod') {
+                  if (doc.metrics) {
+                    emit([doc.userId,doc.leagueId,doc.periodStartDate], doc.metrics);
+                  }
+                }
+              }"
+        reduce: "function (keys,values,rereduce) {
+                  sumOfMetrics = {};
+                  for (var i=0;i<values.length;i++) {
+                    var metrics = values[i];
+                    for (var k in metrics) {
+                      if (!sumOfMetrics[k]) {
+                        sumOfMetrics[k] = 0;
+                      }
+                      sumOfMetrics[k] += metrics[k];
+                    }
+                  }
+                  return sumOfMetrics;
+                }"
+
   jobs:
     views:
       byType:
         map: "function (doc) { if (doc.job) emit([doc.doctype,doc.createdDate],null); }"
       byDate:
         map: "function (doc) { if (doc.job) emit([doc.createdDate,doc.doctype],null); }"
+  prizes:
+    views:
+      byLeagueId:
+        map: "function (doc) { if (doc.doctype=='Prize') emit(doc.leagueId,null); }"
 
 couch.numberOfDesignDocs = (name for name,design of couch.designDocs).length  
 

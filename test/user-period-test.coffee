@@ -266,3 +266,52 @@ exports.testFetchPicks =
         for pick in picks
           test.ok pick.game
         test.done()
+
+
+exports.testDeterminePrizes = 
+
+  setUp: (callback) -> 
+    @league = new League
+      statsKey: "21oxy8iluhdkjashk"
+      basePeriodCategory: "daiy"
+    @league.save @league.toJSON(),
+      success: =>
+        @periodData = 
+          leagueId: @league.id
+          category: @league.get "basePeriodCategory"
+          startDate: new Date("Mar 21, 2012")
+          endDate: new Date("Mar 22, 2012")
+        @periodData.id = Period.getCouchId
+          category: @league.get("basePeriodCategory")
+          date: @periodData.startDate
+          leagueStatsKey: @league.get("statsKey")
+        @period = new Period(@periodData)
+        @period.save @period.toJSON(),
+          success: =>
+            @user = new User
+            @user.save @user.toJSON(),
+              success: =>
+                UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
+                  success: (userPeriod) =>
+                    @userPeriod = userPeriod
+                    callback()
+  
+  tearDown: (callback) -> 
+    console.log "FIXME - delete all models"
+    callback()
+
+  testDeterminePrizes: (test) ->
+    test.ok @user, "@user is defined"
+    test.ok @period, "@period is defined"
+    test.ok @userPeriod, "@userPeriod is defined"
+    test.ok @prizeThatShouldBeAbleToWin
+    test.ok @prizeWithoutPrerequisite
+    test.ok @prizeThatRequiresMoreGames
+    @userPeriod.determinePrizes
+      error: logErrorResponse "@userPeriod.determinePrizes"
+      success: (prizes) =>
+        # test.equal prizes.length,1
+        # test.equal prizes[0].id, @prizeThatShouldBeAbleToWin.id
+        test.ok false, "implement testDeterminePrizes"
+        test.done()
+

@@ -34,44 +34,44 @@ module.exports = class Pick extends Backbone.Model
 
   final: -> 
     return null unless @game
-    @game.get("status").final
+    @game.final()
     
   couldDraw: -> 
     return null unless @game
     @game.get("couldDraw")
 
-  predictionMade: -> 
-    return true if @.get("home") or @.get("away") or @.get("draw") 
-    return false
+  prediction: -> 
+    return false unless @.get("home") or @.get("away") or @.get("draw") 
+    return true
 
   safety: -> 
-    return true if @.get("butter") and not @predictionMade()
+    return true if @.get("butter") and not @prediction()
     return false
 
   risk: ->
-    return true if @.get("butter") and @predictionMade()
+    return true if @.get("butter") and @prediction()
     return false
 
   useless: ->
-    not @predictionMade() and not @safety()
+    not @prediction() and not @safety()
 
-  correctPredictionMade: ->
+  correctPrediction: ->
     return null unless @final()
     return true if @game.homeWin() and @get "home"
     return true if @game.awayWin() and @get "away"
     return true if @game.draw() and @get "draw"
     return false
 
-  incorrectPredictionMade: ->
+  incorrectPrediction: ->
     return null unless @final()
-    return false unless @predictionMade()
-    return not @correctPredictionMade()
+    return false unless @prediction()
+    return not @correctPrediction()
 
-  incorrectRiskMade: ->
-    @incorrectPredictionMade() and @risk()
+  incorrectRisk: ->
+    @incorrectPrediction() and @risk()
 
-  correctRiskMade: ->
-    @correctPredictionMade() and @risk()
+  correctRisk: ->
+    @correctPrediction() and @risk()
 
   multiplier: ->
     return 2 if @risk()
@@ -109,7 +109,7 @@ module.exports = class Pick extends Backbone.Model
     a
 
   valuePicked: ->
-    return null unless @predictionMade()
+    return null unless @prediction()
     return @homeValue() if @get "home"
     return @awayValue() if @get "away"
     return @drawValue() if @get "draw"
@@ -140,6 +140,6 @@ module.exports = class Pick extends Backbone.Model
   points: ->
     return null unless @final()
     return @safetyValue() if @safety()
-    return @valuePicked() if @correctPredictionMade()
-    return -@valueOfCorrectPick() if @incorrectRiskMade()
+    return @valuePicked() if @correctPrediction()
+    return -@valueOfCorrectPick() if @incorrectRisk()
     return 0

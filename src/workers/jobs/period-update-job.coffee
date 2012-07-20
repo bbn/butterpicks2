@@ -31,8 +31,7 @@ module.exports = class PeriodUpdateJob extends Job
         @period.fetchGames
           error: options.error
           success: (games) =>
-            @games = games
-            process = if @games then @updatePeriod else @deletePeriod
+            process = if games.length then @updatePeriod else @deletePeriod
             process.call @,
               error: options.error
               success: => options.success @
@@ -48,10 +47,21 @@ module.exports = class PeriodUpdateJob extends Job
 
 
   updatePeriod: (options) ->
-    console.log "TODO: only updateUserPeriods if results of games have changed significantly"
-    @updateUserPeriods
+    @updateFinalStatus
       error: options.error
-      success: options.success
+      success: =>
+        console.log "TODO: only updateUserPeriods if results of games have changed significantly"
+        @updateUserPeriods
+          error: options.error
+          success: options.success
+
+
+  updateFinalStatus: (options) ->
+    final = true
+    for game in @period.games
+      final = false unless game.get("status").final
+    return options.success() unless final
+    @period.save {final:true}, options
 
 
   updateUserPeriods: (options) ->

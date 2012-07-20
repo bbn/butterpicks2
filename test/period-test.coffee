@@ -130,6 +130,7 @@ exports.testFetchAssociatedModels =
           success: (game1,response) =>
             test.ok game1
             test.ok game1.id
+            @period.games = null
             @period.fetchGames
               error: logErrorResponse "@period.fetchGames"
               success: (games,response) =>
@@ -142,6 +143,7 @@ exports.testFetchAssociatedModels =
                   error: logErrorResponse "g2.save"
                   success: (game2,response) =>
                     test.ok game2
+                    @period.games = null
                     @period.fetchGames
                       error: logErrorResponse "@period.fetchGames"
                       success: (games,response) =>
@@ -201,3 +203,12 @@ exports.testFetchAssociatedModels =
                                             user2.destroy
                                               error: logErrorResponse "user2.destroy"
                                               success: => test.done()
+
+
+testFetchPeriodMetrics = (test) ->
+  test.ok false, "implement testFetchPeriodMetrics"
+  test.done()
+
+testPeriodFinal = (test) ->
+  test.ok false, "implement testPeriodFinal"
+  test.done()

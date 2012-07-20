@@ -367,6 +367,8 @@ require.define("/models/user.js", function (require, module, exports, __dirname,
       createdDate: new Date()
     };
 
+    User.prototype.prizes = null;
+
     return User;
 
   })(Backbone.Model);
@@ -3041,6 +3043,10 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       return status.score.away === status.score.home;
     };
 
+    Game.prototype.final = function() {
+      return this.get("status").final;
+    };
+
     return Game;
 
   })(Backbone.Model);
@@ -3070,8 +3076,13 @@ require.define("/models/period.js", function (require, module, exports, __dirnam
       leagueId: null,
       category: null,
       startDate: null,
-      endDate: null
+      endDate: null,
+      final: false
     };
+
+    Period.prototype.games = null;
+
+    Period.prototype.userPeriods = null;
 
     Period.prototype.validate = function(attr) {
       if (!attr.leagueId) return "no leagueId attribute";
@@ -3139,7 +3150,7 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
 
     Pick.prototype.final = function() {
       if (!this.game) return null;
-      return this.game.get("status").final;
+      return this.game.final();
     };
 
     Pick.prototype.couldDraw = function() {
@@ -3147,26 +3158,28 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
       return this.game.get("couldDraw");
     };
 
-    Pick.prototype.predictionMade = function() {
-      if (this.get("home") || this.get("away") || this.get("draw")) return true;
-      return false;
+    Pick.prototype.prediction = function() {
+      if (!(this.get("home") || this.get("away") || this.get("draw"))) {
+        return false;
+      }
+      return true;
     };
 
     Pick.prototype.safety = function() {
-      if (this.get("butter") && !this.predictionMade()) return true;
+      if (this.get("butter") && !this.prediction()) return true;
       return false;
     };
 
     Pick.prototype.risk = function() {
-      if (this.get("butter") && this.predictionMade()) return true;
+      if (this.get("butter") && this.prediction()) return true;
       return false;
     };
 
     Pick.prototype.useless = function() {
-      return !this.predictionMade() && !this.safety();
+      return !this.prediction() && !this.safety();
     };
 
-    Pick.prototype.correctPredictionMade = function() {
+    Pick.prototype.correctPrediction = function() {
       if (!this.final()) return null;
       if (this.game.homeWin() && this.get("home")) return true;
       if (this.game.awayWin() && this.get("away")) return true;
@@ -3174,18 +3187,18 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
       return false;
     };
 
-    Pick.prototype.incorrectPredictionMade = function() {
+    Pick.prototype.incorrectPrediction = function() {
       if (!this.final()) return null;
-      if (!this.predictionMade()) return false;
-      return !this.correctPredictionMade();
+      if (!this.prediction()) return false;
+      return !this.correctPrediction();
     };
 
-    Pick.prototype.incorrectRiskMade = function() {
-      return this.incorrectPredictionMade() && this.risk();
+    Pick.prototype.incorrectRisk = function() {
+      return this.incorrectPrediction() && this.risk();
     };
 
-    Pick.prototype.correctRiskMade = function() {
-      return this.correctPredictionMade() && this.risk();
+    Pick.prototype.correctRisk = function() {
+      return this.correctPrediction() && this.risk();
     };
 
     Pick.prototype.multiplier = function() {
@@ -3235,7 +3248,7 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
     };
 
     Pick.prototype.valuePicked = function() {
-      if (!this.predictionMade()) return null;
+      if (!this.prediction()) return null;
       if (this.get("home")) return this.homeValue();
       if (this.get("away")) return this.awayValue();
       if (this.get("draw")) return this.drawValue();
@@ -3271,8 +3284,8 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
     Pick.prototype.points = function() {
       if (!this.final()) return null;
       if (this.safety()) return this.safetyValue();
-      if (this.correctPredictionMade()) return this.valuePicked();
-      if (this.incorrectRiskMade()) return -this.valueOfCorrectPick();
+      if (this.correctPrediction()) return this.valuePicked();
+      if (this.incorrectRisk()) return -this.valueOfCorrectPick();
       return 0;
     };
 
@@ -3306,9 +3319,8 @@ require.define("/models/user-period.js", function (require, module, exports, __d
       periodId: null,
       periodStartDate: null,
       periodCategory: null,
-      leagueStatsKey: null,
-      points: 0,
-      prizes: null
+      leagueId: null,
+      metrics: {}
     };
 
     UserPeriod.prototype.user = null;
@@ -3316,6 +3328,110 @@ require.define("/models/user-period.js", function (require, module, exports, __d
     UserPeriod.prototype.period = null;
 
     return UserPeriod;
+
+  })(Backbone.Model);
+
+}).call(this);
+
+});
+
+require.define("/models/prize.js", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Backbone, Prize, _,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Backbone = require("backbone");
+
+  _ = require("underscore");
+
+  module.exports = Prize = (function(_super) {
+
+    __extends(Prize, _super);
+
+    function Prize() {
+      Prize.__super__.constructor.apply(this, arguments);
+    }
+
+    Prize.prototype.defaults = {
+      doctype: "Prize",
+      leagueId: null,
+      name: null,
+      description: null,
+      pointValue: null,
+      eligibleConditions: null,
+      possibleConditions: null,
+      successConditions: null,
+      failConditions: null
+    };
+
+    Prize.prototype.validate = function(attr) {
+      var condition, conditions, validOperators, _i, _len;
+      if (!attr.leagueId) return "no leagueId";
+      if (!(attr.eligibleConditions || attr.possibleConditions || attr.successConditions || attr.failConditions)) {
+        return "no conditions";
+      }
+      conditions = _.flatten(attr.eligibleConditions, attr.possibleConditions, attr.successConditions, attr.failConditions);
+      validOperators = [">", ">=", "==", "<", "<="];
+      for (_i = 0, _len = conditions.length; _i < _len; _i++) {
+        condition = conditions[_i];
+        if (!condition.metric) return "no metric for condition " + condition;
+        if (!condition.operator) return "no operator for condition " + condition;
+        if (condition.value === void 0) {
+          return "no value for condition " + condition;
+        }
+        if (_(validOperators).indexOf(condition.operator) === -1) {
+          return "invalid operator for condition " + condition;
+        }
+      }
+      if (attr.pointValue === null) return "no pointValue";
+      if (!attr.name) return "no name";
+    };
+
+    Prize.prototype.satisfies = function(metrics, conditions) {
+      var condition, _i, _len;
+      if (!conditions) return true;
+      if (!metrics) return false;
+      for (_i = 0, _len = conditions.length; _i < _len; _i++) {
+        condition = conditions[_i];
+        if (metrics[condition.metric] === void 0) return false;
+        switch (condition.operator) {
+          case '>':
+            if (!(metrics[condition.metric] > condition.value)) return false;
+            break;
+          case '>=':
+            if (!(metrics[condition.metric] >= condition.value)) return false;
+            break;
+          case '==':
+            if (metrics[condition.metric] !== condition.value) return false;
+            break;
+          case '<':
+            if (!(metrics[condition.metric] < condition.value)) return false;
+            break;
+          case '<=':
+            if (!(metrics[condition.metric] <= condition.value)) return false;
+        }
+      }
+      return true;
+    };
+
+    Prize.prototype.eligible = function(metrics) {
+      return this.satisfies(metrics, this.get("eligibleConditions"));
+    };
+
+    Prize.prototype.possible = function(metrics) {
+      return this.eligible(metrics) && (!this.fail(metrics)) && (this.satisfies(metrics, this.get("possibleConditions")));
+    };
+
+    Prize.prototype.success = function(metrics) {
+      return this.possible(metrics) && this.satisfies(metrics, this.get("successConditions"));
+    };
+
+    Prize.prototype.fail = function(metrics) {
+      return this.satisfies(metrics, this.get("failConditions"));
+    };
+
+    return Prize;
 
   })(Backbone.Model);
 
@@ -3342,6 +3458,8 @@ require.define("/models.js", function (require, module, exports, __dirname, __fi
   models.Pick = require("./models/pick");
 
   models.UserPeriod = require("./models/user-period");
+
+  models.Prize = require("./models/prize");
 
 }).call(this);
 

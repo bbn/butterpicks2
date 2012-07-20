@@ -210,6 +210,8 @@ exports.testUserPeriodGetController =
       UserPeriod.createForUserAndPeriod params,
         error: logErrorResponse "UserPeriod.createForUserAndPeriod"
         success: (userPeriod,response) =>
+          test.ok userPeriod.id
+          test.equal userPeriod.get("metrics").points,0
           x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
           x.on "success", (response) =>
             test.ok response
@@ -221,6 +223,8 @@ exports.testUserPeriodGetController =
             test.equal userPeriodData.leagueId, @period.get("leagueId")
             test.equal userPeriodData.periodCategory, @period.get("category")
             test.equal userPeriodData.periodStartDate, @period.get("startDate").toJSON()
+            test.ok userPeriodData.metrics
+            test.equal userPeriodData.metrics.points,0
             user2 = new User()
             user2.save user2.toJSON(),
               error: logErrorResponse "user2.save"
@@ -228,8 +232,8 @@ exports.testUserPeriodGetController =
                 UserPeriod.createForUserAndPeriod {userId:user2.id,periodId:@period.id},
                   error: logErrorResponse "UserPeriod.createForUserAndPeriod"
                   success: (userPeriod2,response) =>
-                    test.equal userPeriod2.get("points"),0
-                    userPeriod2.save {points:1}, 
+                    test.equal userPeriod2.get("metrics").points,0
+                    userPeriod2.save {metrics:{points:1}}, 
                       error: logErrorResponse "userPeriod2.save"
                       success: (userPeriod2,response) =>
                         x = mock.get "/user-period?periodId=#{@period.id}&descending=true", { accept:"application/json" }
@@ -238,16 +242,16 @@ exports.testUserPeriodGetController =
                           test.ok response.body
                           userPeriodData = response.body
                           test.equal userPeriodData.length, 2
-                          test.equal userPeriodData[0].points,1
-                          test.equal userPeriodData[1].points,0
+                          test.equal userPeriodData[0].metrics.points,1
+                          test.equal userPeriodData[1].metrics.points,0
                           x = mock.get "/user-period?periodId=#{@period.id}", { accept:"application/json" }
                           x.on "success", (response) =>
                             test.ok response
                             test.ok response.body
                             userPeriodData = response.body
                             test.equal userPeriodData.length, 2
-                            test.equal userPeriodData[0].points,0
-                            test.equal userPeriodData[1].points,1
+                            test.equal userPeriodData[0].metrics.points,0
+                            test.equal userPeriodData[1].metrics.points,1
                             userPeriod.destroy
                               error: logErrorResponse "userPeriod.destroy"
                               success: -> 

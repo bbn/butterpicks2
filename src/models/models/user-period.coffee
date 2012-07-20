@@ -8,10 +8,9 @@ module.exports = class UserPeriod extends Backbone.Model
     periodId: null
     periodStartDate: null
     periodCategory: null
-    leagueStatsKey: null
-    
-    points: 0
-    prizes: null
+    leagueId: null
+
+    metrics: {}
 
   user: null
   period: null

@@ -24,26 +24,26 @@ module.exports = class UserPeriodUpdateJob extends Job
     @userPeriod = new UserPeriod {id:@get("userPeriodId")}
     @userPeriod.fetch
       error: options.error
-      success: (userPeriod,response) =>
-        @period = new Period {id:@userPeriod.get("periodId")}
-        @period.fetch
-          error: (model,response) =>
+      success: (userPeriod) =>
+        @userPeriod.fetchPeriod
+          error: (__,response) =>
             return options.error(response) unless response.status_code == 404
-            console.log "CONSIDER: instead of deleting, flag periods and user periods as invalid"
             @userPeriod.destroy
               error: options.error
               success: => options.success @
-          success: (model,response) =>
+          success: (period) =>
+            @period = period
             @updatePoints
               error: options.error
               success: =>
-                @updateAchievements
+                return options.success(@) unless @period.get("final")
+                @updatePrizes
                   error: options.error
                   success: =>
                     options.success @
 
   updatePoints: (options) ->
-    @period.fetchGames
+    @userPeriod.fetchGames
       error: options.error
       success: (games) =>
         return options.error("zero games for period #{@period.id}") unless games.length
@@ -53,14 +53,25 @@ module.exports = class UserPeriodUpdateJob extends Job
           success: (picks) =>
             points = 0
             (points += pick.points()) for pick in picks
-            console.log "#{points} calculated"
-            return options.success(@) if points == @userPeriod.get("points")
-            @userPeriod.save {points:points},
+            metrics = @userPeriod.get("metrics")
+            return options.success(@) if metrics.points == points
+            metrics.points = points
+            @userPeriod.save {metrics:metrics},
               error: options.error
               success: (userPeriod) =>
-                @userPeriod = userPeriod                
                 options.success @
 
-  updateAchievements: (options) ->
-    console.log "FIXME update UserPeriod achievements based on picks made, past periods"
-    options.success @
+  updatePrizes: (options) ->
+    @userPeriod.determinePrizes
+      error: options.error
+      success: (prizes) =>
+        metrics = @userPeriod.get("metrics")
+        for prize in prizes
+          if prize.won
+            metrics[prize.id] = 1
+          else
+            delete metrics[prize.id]
+        @userPeriod.save {metrics:metrics},
+          error: options.error
+          success: (userPeriod) =>
+            options.success @
