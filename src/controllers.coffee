@@ -50,11 +50,10 @@ exports.router.map ->
 
   @get("/butters").bind (req,res,params) ->
     return res.send 400,{},{error:"no userId param"} unless params.userId
-    u = new User {id:params.userId}
+    u = new User {_id:params.userId}
     u.getButters
       error: (_,err) -> res.send err.status_code,{},err
-      success: (value) -> 
-        res.send 200,{},value
+      success: (value) -> res.send 200,{},value
 
 
   @post("/game").bind (req,res,params) ->
@@ -68,7 +67,7 @@ exports.router.map ->
     for param in ["category","leagueId","date"]
       return res.send 400,{},{error:"no #{param} param"} unless params[param]
     periodId = Period.getCouchId params
-    p = new Period({ id:periodId })
+    p = new Period({ _id:periodId })
     p.fetch
       error: (model,response) -> res.send response.status_code,{},response
       success: (model,response) -> res.send model
@@ -96,16 +95,16 @@ exports.router.map ->
 
   @post("/pick").bind (req,res,params) ->
     return res.send 400,{},{error:"invalid params"} unless params.userId and params.gameId
-    user = new User {id:params.userId}
+    user = new User {_id:params.userId}
     user.getButters
       error: (_,response) -> sendError response
       success: (butters) -> 
         user.butters = butters
-        testUserAndGame user,null
-    game = new Game {id:params.gameId}
+        testUserAndGame {user:user}
+    game = new Game {_id:params.gameId}
     game.fetch
       error: (_,response) -> sendError response
-      success: (game,response) -> testUserAndGame null,game
+      success: (game,response) -> testUserAndGame {game:game}
 
     errorSent = false
     sendError = (couchResponse) ->
@@ -115,9 +114,9 @@ exports.router.map ->
 
     @game = null
     @user = null
-    testUserAndGame = (user,game) =>
-      @game = game if game
-      @user = user if user
+    testUserAndGame = (data) =>
+      @game = data.game if data.game
+      @user = data.user if data.user
       return unless @game and @user
       return res.send(400,{},"deadlineHasPassed") if @game.deadlineHasPassed()
       pick = new Pick(params)
@@ -125,7 +124,8 @@ exports.router.map ->
       return res.send(400,{},"not editable") unless pick.editable()
       return res.send(400,{},"invalid") unless pick.isValid()
       return res.send(400,{},"insufficient butter") if params.butter and (@user.butters <= 0)
-      Pick.create params,
+
+      Pick.create _(params).extend
         error: (_,response) -> sendError response
         success: (pick,response) => 
           return res.send(pick) unless pick.get "butter"
@@ -142,18 +142,18 @@ exports.router.map ->
 
   @put("/pick").bind (req,res,params) ->
     return res.send 400,{},{error:"invalid params"} unless params.id
-    pick = new Pick {id:params.id}
+    pick = new Pick {_id:params.id}
     pick.fetch
       error: (_,response) -> res.send response.status_code,{},response
       success: (pick,response) ->
-        game = new Game {id:pick.get("gameId")}
+        game = new Game {_id:pick.get("gameId")}
         game.fetch
           error: (_,response) -> res.send response.status_code,{},response
           success: (game,response) ->
             return res.send(400,{},"deadlineHasPassed") if game.deadlineHasPassed()
             pick.game = game
             return res.send(400,{},"not editable") unless pick.editable()
-            user = new User {id:pick.get("userId")}
+            user = new User {_id:pick.get("userId")}
             user.getButters
               error: (_,response) -> res.send response.status_code,{},response
               success: (butters) -> 

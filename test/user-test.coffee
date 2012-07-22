@@ -191,7 +191,3 @@ exports.testUserFetchMetrics = (test) ->
 
 
 
-
-exports.testUserPrizes = (test) ->
-  test.ok false, "implement testUserPrizes"
-  test.done()

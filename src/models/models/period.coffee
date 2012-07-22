@@ -2,6 +2,8 @@ Backbone = require "backbone"
 
 module.exports = class Period extends Backbone.Model
 
+  idAttribute: "_id"
+
   defaults :
     doctype: "Period"
     leagueId: null

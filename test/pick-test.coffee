@@ -227,15 +227,15 @@ exports.modelTests = (test) ->
 
 
 exports.pickCreateTest = (test) ->
-  pickData =
-    gameId: "di1b7xfbqudgw"
-    userId: "dlquxknuhasjklndhalnsjh"
-  Pick.create pickData,
+  gameId = "dgafskdjb2o87qwiugla"
+  userId = "di1u2qwdnasj"
+  Pick.create
+    gameId: gameId
+    userId: userId
     error: logErrorResponse "Pick.create"
     success: (pick,response) ->
       test.ok pick
-      test.equal pick.id, Pick.getCouchId(pickData)
-
+      test.equal pick.id, Pick.getCouchId({gameId:gameId,userId:userId})
       pick.destroy
         error: logErrorResponse "pick.destroy"
         success: -> test.done()  

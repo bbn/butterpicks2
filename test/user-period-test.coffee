@@ -4,6 +4,7 @@ Backbone = require "backbone"
 bbCouch = require "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "../lib/models"
+require "../lib/model-server-utils"
 
 User = models.User
 League = models.League
@@ -11,6 +12,7 @@ Period = models.Period
 UserPeriod = models.UserPeriod
 Game = models.Game
 Pick = models.Pick
+Prize = models.Prize
 
 
 logErrorResponse = (message) ->
@@ -218,7 +220,7 @@ exports.testFetchPicks =
                             draw: 0
                         @game2.save @game2.toJSON(),
                           success: =>  
-                            pickParams = 
+                            Pick.create
                               userId: @user.id
                               gameId: @game1.id
                               home: true
@@ -227,13 +229,17 @@ exports.testFetchPicks =
                               butter: false
                               createdDate: @game1.get("startDate").add({hours:-1})
                               updatedDate: @game1.get("startDate").add({hours:-1})
-                            Pick.create pickParams,
                               success: (pick1) =>
                                 @pick1 = pick1
-                                pickParams.gameId = @game2.id
-                                pickParams.home = false
-                                pickParams.away = true                  
-                                Pick.create pickParams,
+                                Pick.create
+                                  userId: @user.id
+                                  gameId: @game2.id
+                                  home: false
+                                  away: true
+                                  draw: false
+                                  butter: false
+                                  createdDate: @game1.get("startDate").add({hours:-1})
+                                  updatedDate: @game1.get("startDate").add({hours:-1})
                                   success: (pick2) =>
                                     @pick2 = pick2
                                     callback()
@@ -294,7 +300,79 @@ exports.testDeterminePrizes =
                 UserPeriod.createForUserAndPeriod {userId:@user.id,periodId:@period.id},
                   success: (userPeriod) =>
                     @userPeriod = userPeriod
-                    callback()
+                    @game = new Game
+                      statsKey: "gdfashjkl6yu21o3fyuhbjd"
+                      leagueId: @league.id
+                      awayTeam:
+                        statsKey: "d12itefbdygquwnilhals"
+                        location: "Las Vegas"
+                        name: "Dice"
+                      homeTeam:
+                        statsKey: "asdhasjkhdgkjahsgd"
+                        location: "Utah"
+                        name: "Sensibles"
+                      startDate: new Date("19:00 Mar 21, 2012")
+                      status:
+                        score:
+                          away: 12
+                          home: 3
+                        text: "final"
+                        final: true
+                      couldDraw: false 
+                      legit: true
+                      pickCount:
+                        home: 100
+                        away: 200
+                        draw: 0
+                    @game.save @game.toJSON(),
+                      error: logErrorResponse "@game.save"
+                      success: (game) =>
+                        Pick.create
+                          userId: @user.id
+                          gameId: @game.id
+                          away:true
+                          home:false
+                          draw:false
+                          error: logErrorResponse "Pick.create"
+                          success: (pick) =>
+                            @pick = pick
+                            @prizeThatShouldBeAbleToWin = new Prize
+                              leagueId: @league.id
+                              name: "prizeThatShouldBeAbleToWin"
+                              description: "one correct pick"
+                              pointValue: 10
+                              eligibleConditions: [{metric:"games",operator:">=",value:1}]
+                              possibleConditions: [{metric:"maxPossibleCorrectPredictions",operator:">=",value:1}]
+                              successConditions: [{metric:"correctPredictions",operator:">=",value:1},{metric:"allGamesFinal",operator:"==",value:true}]
+                              failConditions: [{metric:"correctPredictions",operator:"<",value:1},{metric:"allGamesFinal",operator:"==",value:true}]
+                            @prizeThatShouldBeAbleToWin.save @prizeThatShouldBeAbleToWin.toJSON(),
+                              error: logErrorResponse "@prizeThatShouldBeAbleToWin.save"
+                              success: (p) =>
+                                @prizeWithoutPrerequisite = new Prize
+                                  leagueId: @league.id
+                                  name: "prizeWithoutPrerequisite"
+                                  description: "two correct picks"
+                                  pointValue: 100
+                                  eligibleConditions: [{metric:@prizeThatShouldBeAbleToWin.id,operator:">=",value:1},{metric:"games",operator:">=",value:2}]
+                                  possibleConditions: [{metric:"maxPossibleCorrectPredictions",operator:">=",value:2}]
+                                  successConditions: [{metric:"correctPredictions",operator:">=",value:2},{metric:"allGamesFinal",operator:"==",value:true}]
+                                  failConditions: [{metric:"correctPredictions",operator:"<",value:2},{metric:"allGamesFinal",operator:"==",value:true}]
+                                @prizeWithoutPrerequisite.save @prizeWithoutPrerequisite.toJSON(),
+                                  error: logErrorResponse "@prizeThatShouldBeAbleToWin.save"
+                                  success: (p) =>
+                                    @prizeThatRequiresMoreGames = new Prize
+                                      leagueId: @league.id
+                                      name: "prizeWithoutPrerequisite"
+                                      description: "lucky seven"
+                                      pointValue: 777
+                                      eligibleConditions: [{metric:"games",operator:"==",value:7}]
+                                      possibleConditions: [{metric:"incorrectPredictions",operator:"==",value:0}]
+                                      successConditions: [{metric:"incorrectPredictions",operator:"==",value:0},{metric:"allGamesFinal",operator:"==",value:true}]
+                                      failConditions: [{metric:"incorrectPredictions",operator:">",value:0},{metric:"allGamesFinal",operator:"==",value:true}]
+                                    @prizeThatRequiresMoreGames.save @prizeThatRequiresMoreGames.toJSON(),
+                                      error: logErrorResponse "@prizeThatShouldBeAbleToWin.save"
+                                      success: (p) =>
+                                        callback()
   
   tearDown: (callback) -> 
     console.log "FIXME - delete all models"
@@ -304,14 +382,31 @@ exports.testDeterminePrizes =
     test.ok @user, "@user is defined"
     test.ok @period, "@period is defined"
     test.ok @userPeriod, "@userPeriod is defined"
-    test.ok @prizeThatShouldBeAbleToWin
-    test.ok @prizeWithoutPrerequisite
-    test.ok @prizeThatRequiresMoreGames
+    test.ok @prizeThatShouldBeAbleToWin, "prizeThatShouldBeAbleToWin"
+    test.ok @prizeWithoutPrerequisite, "prizeWithoutPrerequisite"
+    test.ok @prizeThatRequiresMoreGames, "prizeThatRequiresMoreGames"
     @userPeriod.determinePrizes
       error: logErrorResponse "@userPeriod.determinePrizes"
       success: (prizes) =>
-        # test.equal prizes.length,1
-        # test.equal prizes[0].id, @prizeThatShouldBeAbleToWin.id
-        test.ok false, "implement testDeterminePrizes"
+        test.equal prizes.length,3
+        test.equal prizes[0].id, @prizeThatShouldBeAbleToWin.id, "@prizeThatShouldBeAbleToWin.id"
+        test.equal prizes[0].currentStatus.eligible, true, "prizes[0].currentStatus.eligible"
+        test.equal prizes[0].currentStatus.possible, true, "prizes[0].currentStatus.possible"
+        test.equal prizes[0].currentStatus.success, true, "prizes[0].currentStatus.success"
+        test.equal prizes[0].currentStatus.fail, false, "prizes[0].currentStatus.fail"
+        test.equal prizes[1].id, @prizeWithoutPrerequisite.id, "@prizeWithoutPrerequisite.id"
+        test.equal prizes[1].currentStatus.eligible, false, "prizes[1].currentStatus.eligible"
+        test.equal prizes[1].currentStatus.possible, false, "prizes[1].currentStatus.possible"
+        test.equal prizes[1].currentStatus.success, false, "prizes[1].currentStatus.success"
+        test.equal prizes[1].currentStatus.fail, true, "prizes[1].currentStatus.fail"
+        test.equal prizes[2].id, @prizeThatRequiresMoreGames.id, "@prizeThatRequiresMoreGames.id"
+        test.equal prizes[2].currentStatus.eligible, false, "prizes[2].currentStatus.eligible"
+        test.equal prizes[2].currentStatus.possible, false, "prizes[2].currentStatus.possible"
+        test.equal prizes[2].currentStatus.success, false, "prizes[2].currentStatus.success"
+        test.equal prizes[2].currentStatus.fail, false, "prizes[2].currentStatus.fail"
         test.done()
 
+
+testFetchUser: (test) -> test.ok false, "implement testFetchUser"
+testFetchPeriod: (test) -> test.ok false, "implement testFetchPeriod"
+testFetchGames: (test) -> test.ok false, "implement testFetchGames"

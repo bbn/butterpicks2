@@ -31,6 +31,11 @@ module.exports = class Game extends Backbone.Model
       away: 0
       draw: 0
 
+  getCouchId: ->
+    "game_#{@get 'statsKey'}"
+
+  initialize: (attr) ->
+    if @get("statsKey") then @set({_id:@getCouchId()}) unless @get("_id")
 
   secondsUntilDeadline: ->
     (@get("startDate") - new Date())/1000

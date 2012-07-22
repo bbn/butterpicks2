@@ -40,7 +40,7 @@ exports.createUserPeriodUpdateJob =
         test.done()
 
   tearDown: (callback) ->
-    j = new UserPeriodUpdateJob {id:@modelId}
+    j = new UserPeriodUpdateJob {_id:@modelId}
     j.fetch
       error: logErrorResponse "j.fetch"
       success: ->
@@ -61,7 +61,7 @@ exports.userPeriodUpdateJobQueries =
         callback()
 
   tearDown: (callback) ->
-    j = new UserPeriodUpdateJob {id:@modelId}
+    j = new UserPeriodUpdateJob {_id:@modelId}
     j.fetch
       error: logErrorResponse "tearDown fetch"
       success: ->
@@ -172,7 +172,7 @@ exports.userPeriodUpdateJobWorkDeletedPeriod =
       error: logErrorResponse "userPeriodUpdateJob.work error"
       success: (model,response) =>
         test.equal model.id, @userPeriodUpdateJob.id, "oioioi"
-        userPeriod = new UserPeriod {id:@userPeriod.id}
+        userPeriod = new UserPeriod {_id:@userPeriod.id}
         userPeriod.fetch
           success: => console.log "not what we expect!"
           error: (_,response) =>
@@ -236,7 +236,7 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
                         @game1.save @game1.toJSON(),
                           error: logErrorResponse "game1.save"
                           success: (game1) =>
-                            pickParams = 
+                            Pick.create
                               userId: @user.id
                               gameId: @game1.id
                               home: false
@@ -245,7 +245,6 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
                               butter: false
                               createdDate: new Date("Feb 9, 2010")
                               updatedDate: new Date("Feb 9, 2010")
-                            Pick.create pickParams,
                               success: (pick1) =>
                                 @pick1 = pick1
                                 callback()
@@ -281,14 +280,13 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
       error: logErrorResponse "userPeriodUpdateJob.work error"
       success: (model,response) =>
         test.equal model.id, @userPeriodUpdateJob.id, "oioioi"
-        userPeriod = new UserPeriod {id:@userPeriod.id}
+        userPeriod = new UserPeriod {_id:@userPeriod.id}
         userPeriod.fetch
           error: logErrorResponse "userPeriod.fetch"
           success: (userPeriod) =>
             test.ok userPeriod
             test.equal userPeriod.id, @userPeriod.id
-            test.equal userPeriod.get("points"), 100
-
+            test.equal userPeriod.get("metrics").points, 100
             game2 = new Game
               statsKey: "rdvftyguhijk"
               leagueId: @league.id
@@ -311,7 +309,7 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
               error: logErrorResponse "game2.save"
               success: (game2) =>
                 test.ok game2.id
-                pickParams = 
+                Pick.create
                   userId: @user.id
                   gameId: game2.id
                   home: true
@@ -320,7 +318,6 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
                   butter: false
                   createdDate: new Date("Feb 7, 2010")
                   updatedDate: new Date("Feb 8, 2010")
-                Pick.create pickParams,
                   success: (pick2) =>
                     test.ok pick2.id
                     @userPeriodUpdateJob.work
@@ -332,7 +329,7 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
                           success: (userPeriod) =>
                             test.ok userPeriod
                             test.equal userPeriod.id, @userPeriod.id
-                            test.equal userPeriod.get("points"), 100
+                            test.equal userPeriod.get("metrics").points, 100
                             pick2.destroy
                               success: => game2.destroy
                                 success: =>

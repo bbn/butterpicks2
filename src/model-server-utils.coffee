@@ -1,3 +1,4 @@
+_ = require "underscore"
 util = require "util"
 
 couch = require "./couch"
@@ -75,14 +76,6 @@ User::fetchMetrics = (options) ->
   #   ]
 
 
-Game::getCouchId = ->
-  "game_#{@get 'statsKey'}"
-
-
-Game::initialize = ->
-  if @get("statsKey") then @set({id:@getCouchId()}) unless @get("id")
-
-
 Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
   g = new Game { statsKey: params.statsKey }
   g.fetch
@@ -150,7 +143,7 @@ Game.attrFromStatServerParams = (params) ->
 
 Game::fetchBasePeriodId = (options) ->
   return options.error(null,"param error") unless @get("leagueId") and @get("startDate")
-  league = new League {id:@get("leagueId")}
+  league = new League {_id:@get("leagueId")}
   league.fetch
     error: options.error
     success: (league,response) =>
@@ -167,12 +160,15 @@ Pick.getCouchId = (params) ->
   "#{params.userId}_#{params.gameId}"
 
 
-Pick.create = (params,options) ->
-  return options.error("userId, gameId params plz") unless params.gameId and params.userId
-  pick = new Pick(params)
+Pick.create = (options) ->
+  return options.error("userId, gameId params plz") unless options.gameId and options.userId
+  params = _(options).clone()
+  delete params.error
+  delete params.success
+  pick = new Pick params
   d = new Date()
   pick.set 
-    id:Pick.getCouchId params
+    _id: Pick.getCouchId options
     createdDate: d
     updatedDate: d
   pick.save pick.toJSON(),options
@@ -180,7 +176,7 @@ Pick.create = (params,options) ->
 
 Pick.fetchForUserAndGame = (params,options) ->
   pickId = Pick.getCouchId params
-  pick = new Pick { id: pickId }
+  pick = new Pick { _id: pickId }
   pick.fetch options
 
 
@@ -200,12 +196,12 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
   game.fetchBasePeriodId
     error: options.error
     success: (basePeriodId) ->
-      p = new Period({ id:basePeriodId })
+      p = new Period({ _id:basePeriodId })
       p.fetch
         success: options.success
         error: (p,response) -> 
           console.log "FIXME confirm that error comes from absent model: #{util.inspect response}"
-          league = new League {id:game.get("leagueId")}
+          league = new League { _id:game.get("leagueId")}
           league.fetch
             error: options.error
             success: (league,response) ->
@@ -226,7 +222,7 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
 
 
 Period::fetchGames = (options) ->
-  return process.nextTick(-> options.success @games) if @games
+  return process.nextTick(=> options.success @games) if @games
   viewParams =
     startkey: [@get("leagueId"), @get("startDate").toJSON()]
     endkey:   [@get("leagueId"), @get("endDate").toJSON()]
@@ -236,6 +232,15 @@ Period::fetchGames = (options) ->
     return options.success([],headers) unless body.rows
     @games = ((new Game(row.doc)) for row in body.rows)
     options.success @games
+
+Period::fetchMetrics = (options) ->
+  @fetchGames
+    error: options.error
+    success: (games) =>
+      metrics = 
+        games: @games.length
+        allGamesFinal: _(@games).filter((game)-> game.final()).length == @games.length
+      options.success metrics
 
 
 Period::fetchUserPeriods = (options) ->
@@ -247,12 +252,12 @@ UserPeriod.getCouchId = (params) ->
 
 UserPeriod.fetchForUserAndPeriod = (params,options) ->
   userPeriodId = UserPeriod.getCouchId params
-  userPeriod = new UserPeriod { id: userPeriodId }
+  userPeriod = new UserPeriod { _id: userPeriodId }
   userPeriod.fetch options
 
 UserPeriod.createForUserAndPeriod = (params,options) ->
   userPeriodId = UserPeriod.getCouchId params
-  p = new Period { id: params.periodId }
+  p = new Period { _id: params.periodId }
   p.fetch
     error: options.error
     success: (p,response) ->      
@@ -292,9 +297,19 @@ UserPeriod.fetchForUserAndLeague = (params,options) ->
     userPeriods = ((new UserPeriod(row.doc)) for row in body.rows)
     options.success userPeriods
 
+UserPeriod::fetchUser = (options) ->
+  return process.nextTick(=> options.success @user) if @user
+  u = new User {_id:@get("userId")}
+  u.fetch
+    error: options.error
+    success: (u) =>
+      @user = u
+      options.success @user
+
+
 UserPeriod::fetchPeriod = (options) ->
-  return process.nextTick(-> options.success @period) if @period
-  period = new Period {id:@get("periodId")}
+  return process.nextTick(=> options.success @period) if @period
+  period = new Period {_id:@get("periodId")}
   period.fetch
     error: options.error
     success: (period) =>
@@ -302,7 +317,7 @@ UserPeriod::fetchPeriod = (options) ->
       options.success @period
 
 UserPeriod::fetchGames = (options) ->
-  return process.nextTick(-> options.success @games) if @games
+  return process.nextTick(=> options.success @games) if @games
   @fetchPeriod
     error: options.error
     success: (period) =>
@@ -342,57 +357,58 @@ UserPeriod::fetchMetrics = (options) ->
     error: options.error
     success: (picks) =>
       metrics =
-        # games: @games.length
-        # allGamesFinal: _(@games).filter((game)-> game.final()).size() == @games.length
-        picks: _(picks).size()
-        unfinalizedPicks: _(picks).filter((pick)-> not pick.final()).size()
-        homePicks: _(picks).filter((pick)-> pick.get("home")).size()
-        awayPicks: _(picks).filter((pick)-> pick.get("away")).size()
-        drawPicks: _(picks).filter((pick)-> pick.get("draw")).size()
-        uselessPicks: _(picks).filter((pick)-> pick.useless()).size() + @games.length - _(picks).size()
-        predictions: _(picks).filter((pick)-> pick.prediction()).size()
-        correctPredictions: _(picks).filter((pick)-> pick.correctPrediction()).size()
-        incorrectPredictions: _(picks).filter((pick)-> pick.incorrectPrediction()).size()
-        risks: _(picks).filter((pick)-> pick.risk()).size()
-        correctRisks: _(picks).filter((pick)-> pick.correctRisk()).size()
-        incorrectRisks: _(picks).filter((pick)-> pick.incorrectRisk()).size()
-        safeties: _(picks).filter((pick)-> pick.safety()).size()
-        butters: _(picks).filter((pick)-> pick.get("butter")).size()
-        points: _(picks).reduce (memo,pick) -> memo + pick.points()
-
-
-
-
+        picks: picks.length
+        unfinalizedPicks: _(picks).filter((pick)-> not pick.final()).length
+        homePicks: _(picks).filter((pick)-> pick.get("home")).length
+        awayPicks: _(picks).filter((pick)-> pick.get("away")).length
+        drawPicks: _(picks).filter((pick)-> pick.get("draw")).length
+        uselessPicks: _(picks).filter((pick)-> pick.useless()).length + @games.length - _(picks).length
+        predictions: _(picks).filter((pick)-> pick.prediction()).length
+        correctPredictions: _(picks).filter((pick)-> pick.correctPrediction()).length
+        incorrectPredictions: _(picks).filter((pick)-> pick.incorrectPrediction()).length
+        risks: _(picks).filter((pick)-> pick.risk()).length
+        correctRisks: _(picks).filter((pick)-> pick.correctRisk()).length
+        incorrectRisks: _(picks).filter((pick)-> pick.incorrectRisk()).length
+        safeties: _(picks).filter((pick)-> pick.safety()).length
+        butters: _(picks).filter((pick)-> pick.get("butter")).length
+        points: _(picks).reduce ((memo,pick) -> memo + pick.points()), 0
+      metrics.maxPossibleCorrectPredictions = metrics.correctPredictions + metrics.unfinalizedPicks
+      options.success metrics
 
 UserPeriod::determinePrizes = (options) ->
-  return options.error("no user loaded") unless @user
-  return options.error("no period loaded") unless @period
-  return options.error("no period.games loaded") unless options.games or (@period and @period.games)
-  return options.error("no picks loaded") unless @picks
-  Prize.fetchAllForLeague {id:@leagueId},
+  Prize.fetchAllForLeague {id:@get("leagueId")},
     error: options.error
     success: (prizes) =>
       @metrics = {}
-      @user.fetchMetrics 
-        endDate: @periodstartDate
-        leagueId: @leagueId
+
+      @fetchMetrics
         error: options.error
-        success: (userMetrics) =>
-          _(@metrics).extend userMetrics
-          @period.fetchMetrics
+        success: (userPeriodMetrics) =>
+          _(@metrics).extend userPeriodMetrics
+
+          @fetchUser
             error: options.error
-            success: (periodMetrics) =>
-              _(@metrics).extend periodMetrics
-              @fetchMetrics
+            success: =>
+
+              @user.fetchMetrics 
+                endDate: @get("periodStartDate")
+                leagueId: @get("leagueId")
                 error: options.error
-                success: (userPeriodMetrics) =>
-                  _(@metrics).extend userPeriodMetrics
-                  for prize in prizes
-                    prize.currentStatus = 
-                      eligible: prize.eligible @metrics
-                      possible: prize.possible @metrics
-                      success:  prize.success  @metrics
-                  options.success prizes
+                success: (userMetrics) =>
+                  _(@metrics).extend userMetrics
+
+                  @period.fetchMetrics
+                    error: options.error
+                    success: (periodMetrics) =>
+                      _(@metrics).extend periodMetrics
+
+                      for prize in prizes
+                        prize.currentStatus = 
+                          eligible: prize.eligible @metrics
+                          possible: prize.possible @metrics
+                          success:  prize.success  @metrics
+                          fail:     prize.fail     @metrics
+                      options.success prizes
 
 
 

@@ -93,7 +93,7 @@ exports.testCreateUser =
 
   tearDown: (callback) ->
     id = @returnedId
-    u = new User({ id:id })
+    u = new User({ _id:id })
     u.fetch
       error: (model,response) -> console.log "u.fetch response: #{util.inspect response}"
       success: (model,response) ->
@@ -122,7 +122,7 @@ exports.testCreateUserWhoAlreadyExists =
       test.done()
 
   tearDown: (callback) ->
-    u = new User({ id:@userId })
+    u = new User({ _id:@userId })
     u.fetch
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) ->
@@ -316,7 +316,9 @@ exports.testPickGet =
     x.on "success", (response) =>
       test.ok response
       test.equal response.status,404
-      Pick.create {gameId:@game.id,userId:@user.id},
+      Pick.create 
+        gameId:@game.id
+        userId:@user.id
         error: logErrorResponse "pick.save"
         success: (pick,response) =>
           x = mock.get "/pick?userId=#{@user.id}&gameId=#{@game.id}", { accept:"application/json" }
@@ -377,7 +379,7 @@ exports.testPickPost =
         test.equal data.id, Pick.getCouchId(pickData)
         test.equal data.userId, @user.id
         test.equal data.gameId, @game.id
-        test.equal data.home, true
+        test.equal data.home, true, "data.home"
         test.equal data.away, false
         test.equal data.draw, false
         test.equal data.butter, false
@@ -597,7 +599,9 @@ exports.testPickPut =
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: => 
-            Pick.create {userId:@user.id,gameId:@game.id},
+            Pick.create
+              userId:@user.id
+              gameId:@game.id
               error: logErrorResponse "Pick.create"
               success: (pick,response) =>
                 @pick = pick
@@ -610,7 +614,7 @@ exports.testPickPut =
         @game.destroy
           error: logErrorResponse "destroying game"
           success: => 
-            pick = new Pick {id:@pick.id}
+            pick = new Pick {_id:@pick.id}
             pick.fetch
               error: logErrorResponse "pick.fetch"
               success: (pick,response) =>            
@@ -680,12 +684,12 @@ exports.testPickButters =
           error: -> logErrorResponse "saving game"
           success: => 
             pickData = 
+            Pick.create
               userId: @user.id
               gameId: @game.id
               home: false
               away: false
               butter: false
-            Pick.create pickData,
               error: logErrorResponse "Pick.create"
               success: (pick,response) =>
                 @pick = pick
@@ -698,7 +702,7 @@ exports.testPickButters =
         @game.destroy
           error: logErrorResponse "destroying game"
           success: => 
-            pick = new Pick {id:@pick.id}
+            pick = new Pick {_id:@pick.id}
             pick.fetch
               error: logErrorResponse "pick.fetch in tearDown"
               success: (pick,response) => 
@@ -726,7 +730,7 @@ exports.testPickButters =
         x.on "success", (response) =>
           test.ok response
           test.equal response.status,400,"should have no butters"
-          pick = new Pick {id:@pick.id}
+          pick = new Pick {_id:@pick.id}
           pick.fetch
             error: logErrorResponse "pick.fetch"
             success: (pick,response) =>
@@ -749,7 +753,7 @@ exports.testPickButters =
                         test.ok response.body
                         for key,val of pickData
                           test.equal response.body[key],val,"test for #{key}"
-                        pick = new Pick {id:@pick.id}
+                        pick = new Pick {_id:@pick.id}
                         pick.fetch
                           error: logErrorResponse "pick.fetch"
                           success: (pick,response) =>
@@ -766,7 +770,7 @@ exports.testPickButters =
                                   test.ok response.body
                                   for key,val of pickData
                                     test.equal response.body[key],val
-                                  pick = new Pick {id:@pick.id}
+                                  pick = new Pick {_id:@pick.id}
                                   pick.fetch
                                     error: logErrorResponse "pick.fetch"
                                     success: (pick,response) =>

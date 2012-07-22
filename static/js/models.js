@@ -360,6 +360,8 @@ require.define("/models/user.js", function (require, module, exports, __dirname,
       User.__super__.constructor.apply(this, arguments);
     }
 
+    User.prototype.idAttribute = "_id";
+
     User.prototype.defaults = {
       doctype: "User",
       facebookId: null,
@@ -3005,6 +3007,20 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       }
     };
 
+    Game.prototype.getCouchId = function() {
+      return "game_" + (this.get('statsKey'));
+    };
+
+    Game.prototype.initialize = function(attr) {
+      if (this.get("statsKey")) {
+        if (!this.get("_id")) {
+          return this.set({
+            _id: this.getCouchId()
+          });
+        }
+      }
+    };
+
     Game.prototype.secondsUntilDeadline = function() {
       return (this.get("startDate") - new Date()) / 1000;
     };
@@ -3071,6 +3087,8 @@ require.define("/models/period.js", function (require, module, exports, __dirnam
       Period.__super__.constructor.apply(this, arguments);
     }
 
+    Period.prototype.idAttribute = "_id";
+
     Period.prototype.defaults = {
       doctype: "Period",
       leagueId: null,
@@ -3114,6 +3132,8 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
     function Pick() {
       Pick.__super__.constructor.apply(this, arguments);
     }
+
+    Pick.prototype.idAttribute = "_id";
 
     Pick.prototype.defaults = {
       doctype: "Pick",
@@ -3313,6 +3333,8 @@ require.define("/models/user-period.js", function (require, module, exports, __d
       UserPeriod.__super__.constructor.apply(this, arguments);
     }
 
+    UserPeriod.prototype.idAttribute = "_id";
+
     UserPeriod.prototype.defaults = {
       doctype: "UserPeriod",
       userId: null,
@@ -3352,6 +3374,8 @@ require.define("/models/prize.js", function (require, module, exports, __dirname
     function Prize() {
       Prize.__super__.constructor.apply(this, arguments);
     }
+
+    Prize.prototype.idAttribute = "_id";
 
     Prize.prototype.defaults = {
       doctype: "Prize",

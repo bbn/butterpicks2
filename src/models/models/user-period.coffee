@@ -2,6 +2,8 @@ Backbone = require "backbone"
 
 module.exports = class UserPeriod extends Backbone.Model
 
+  idAttribute: "_id"
+
   defaults:
     doctype: "UserPeriod"
     userId: null

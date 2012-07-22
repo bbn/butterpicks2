@@ -3,6 +3,8 @@ _ = require "underscore"
 
 module.exports = class Prize extends Backbone.Model
 
+  idAttribute: "_id"
+
   defaults:
     doctype: "Prize"
     leagueId: null

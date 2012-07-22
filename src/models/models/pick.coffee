@@ -2,6 +2,8 @@ Backbone = require "backbone"
 
 module.exports = class Pick extends Backbone.Model
 
+  idAttribute: "_id"
+
   defaults:
     doctype: "Pick"
     userId: null

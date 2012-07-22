@@ -61,7 +61,7 @@ exports.testButters =
           y = mock.get "/butters?userId=#{@userModel.id}", { accept: "application/json" }
           y.on 'success', (response) =>
             test.equal response.status, 200 
-            test.equal response.body,1, "should have 1 butter. #{util.inspect response.body.butters}"
+            test.equal response.body,1, "should have 1 butter. response:#{util.inspect response.body}"
             tr2 = new ButterTransaction
               userId: @userModel.id
               amount: 100
