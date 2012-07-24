@@ -77,7 +77,7 @@ exports.testButters =
                   test.equal response.body,101, "should have 101 butters"
                   tr3 = new ButterTransaction
                     userId: @userModel.id
-                    pickId: "5127ghjkh12983812" #TODO eventually put in real pick here
+                    pickId: "5127ghjkh12983812" 
                     amount: -1
                     createdDate: new Date()
                     note: "pick"

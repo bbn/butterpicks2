@@ -1,5 +1,5 @@
 ###
-TODO
+OPTIMIZATION
 stats server should ping this app directly when a change is made.
 refactor this code so that it accepts updated game data in a request.
 ###

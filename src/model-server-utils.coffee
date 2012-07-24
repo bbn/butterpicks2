@@ -336,7 +336,7 @@ UserPeriod::fetchPicks = (options) ->
       return options.success([]) unless @games.length
       picks = []
       errorReturned = false
-      # TODO the below is bad - so many DB accesses. collect into a single view!
+      # OPTIMIZATION the below is bad - so many DB accesses. collect into a single view!
       for game in @games
         do (game) =>
           Pick.fetchForUserAndGame {userId:@get("userId"),gameId:game.id},
