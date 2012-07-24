@@ -91,7 +91,8 @@ Game::updateFromStatsAttributes = (params,options) ->
     error: options.error
     success: (league,response) =>
       return options.error(null,"no league for statsKey #{params.leagueStatsKey}") unless league
-      @set {leagueId:league.id,startDate:new Date(params.starts_at*1000)}
+      @set({leagueId:league.id}) unless @get("leagueId")
+      @set({startDate:new Date(params.starts_at*1000)}) unless @get("startDate")
       @fetchBasePeriodId
         error: options.error
         success: (basePeriodId) =>

@@ -50,7 +50,7 @@ module.exports = class PeriodUpdateJob extends Job
     @updateFinalStatus
       error: options.error
       success: =>
-        console.log "TODO: only updateUserPeriods if results of games have changed significantly"
+        console.log "OPTIMIZATION: only updateUserPeriods if results of games have changed significantly"
         @updateUserPeriods
           error: options.error
           success: options.success

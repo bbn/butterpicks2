@@ -59,8 +59,7 @@ exports.router.map ->
   @post("/game").bind (req,res,params) ->
     Game.createOrUpdateGameFromStatsAttributes params,
       error: (_,response) -> res.send response.status_code,{},response
-      success: (game,response) -> 
-        res.send game
+      success: (game,response) -> res.send game
 
 
   @get("/period").bind (req,res,params) ->

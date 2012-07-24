@@ -21,6 +21,7 @@ logErrorResponse = (message) ->
   return (model,response) ->
     console.log "ERROR: #{message} -> response: #{util.inspect response}"
 
+console.log "TODO test periodupdatejob that has to change period for a game"
 
 exports.createPeriodUpdateJob = 
 

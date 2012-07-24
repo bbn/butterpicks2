@@ -278,6 +278,63 @@ exports.testGamePostUpdate =
             success: ->
               test.done()
 
+  testGamePostUpdateToDifferentPeriod: (test) ->
+    data = 
+      statsKey: @gameData.statsKey
+      updated_at: (new Date(2010,1,2)).valueOf()/1000
+      league: "MLB"
+      leagueStatsKey: @league.get "statsKey"
+      away_team:
+        key: "xn893rpiqu3hni"
+        location: "Chicago"
+        name: "Cubs"
+      home_team:
+        key: "78oniuynoiuy"
+        location: "Boston"
+        name: "Red Sox"
+      starts_at: (new Date(2010,2,3)).valueOf()/1000
+      away_score: 72
+      home_score: 1
+      status: "2nd inning"
+      final: false
+      legit: true
+    x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
+    x.on 'success', (response) =>
+      test.equal response.status,201
+      test.ok response.body
+      gameData = response.body
+      test.equal gameData.doctype,"Game"
+      test.equal gameData.statsKey,data.statsKey
+      test.equal gameData.statsLatestUpdateDate,(new Date(data.updated_at*1000)).toJSON()
+      test.equal gameData.leagueId,@league.id
+      test.equal gameData.awayTeam.statsKey,data.away_team.key
+      test.equal gameData.awayTeam.location,data.away_team.location
+      test.equal gameData.awayTeam.name,data.away_team.name
+      test.equal gameData.homeTeam.statsKey,data.home_team.key
+      test.equal gameData.homeTeam.location,data.home_team.location
+      test.equal gameData.homeTeam.name,data.home_team.name
+      test.equal gameData.startDate,(new Date(data.starts_at*1000)).toJSON()
+      test.equal gameData.status.score.away,data.away_score
+      test.equal gameData.status.score.home,data.home_score
+      test.equal gameData.status.text,data.status
+      test.equal gameData.status.final,data.final
+      test.equal gameData.legit,data.legit
+      test.equal gameData.pickCount.home,@gameData.pickCount.home
+      test.equal gameData.pickCount.away,@gameData.pickCount.away
+      test.equal gameData.pickCount.draw,@gameData.pickCount.draw
+      test.ok gameData.id
+      PeriodUpdateJob.getNext
+        limit: 2
+        error: logErrorResponse
+        success: (jobs,_) =>
+          test.ok jobs
+          test.equal jobs.length, 2, "should create 2 PeriodUpdateJobs"
+          jobs[0].destroy
+            success: -> jobs[1].destroy
+              success: ->
+                test.done()
+
+
 
 exports.couchViewForGamesByLeagueAndStartDate = (test) ->
   leagueStatsKey = "dqxugoqd7ngauidgas"
@@ -403,4 +460,3 @@ exports.gameModelTest = (test) ->
   test.done()
 
 
-console.log "TODO test game update where a game changes periods."
