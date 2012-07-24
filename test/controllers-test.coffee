@@ -1,3 +1,4 @@
+_ = require "underscore"
 util = require "util"
 journey = require "journey"
 controllers = require "../lib/controllers"
@@ -100,6 +101,29 @@ exports.testCreateUser =
         model.destroy
           error: (model,response) -> console.log "model.destroy response: #{util.inspect response}"
           success: -> callback()
+
+
+# exports.testGetUser = (test) ->
+#   newUserData = 
+#     facebookId: 4567865782
+#     email: "meme@laaaaa.co"
+#   x = mock.get "/user?facebookId=#{newUserData.facebookId}", { accept: "application/json" }
+#   x.on "success", (response) =>
+#     test.ok response, "response is ok"
+#     test.equal response.status, 404, "status should be 404"
+#     x = mock.post "/user", { accept: "application/json" }, JSON.stringify newUserData
+#     x.on "success", (response) =>
+#       test.ok response, "response is ok"
+#       test.equal response.status, 201, "status should be 201. response: #{util.inspect response}"
+#       x = mock.get "/user?facebookId=#{newUserData.facebookId}", { accept: "application/json" }
+#       x.on "success", (response) =>
+#         test.ok response, "response is ok"
+#         test.equal response.status, 200, "status should be 200"
+#         test.equal response.facebookId, newUserData.facebookId
+#         test.equal response.email, newUserData.email
+#         test.ok response.id
+#         test.done()
+
 
 
 exports.testCreateUserWhoAlreadyExists = 
@@ -793,3 +817,107 @@ exports.testPickButters =
                                                         error: logErrorResponse "trannies[1].destroy"
                                                         success: => 
                                                           test.done()
+
+
+
+exports.testUserFetchMetricsController = (test) ->
+  user = new User
+  user.save user.toJSON(),
+    error: logErrorResponse "user.save"
+    success: (user) ->
+      league = new League
+      league.save league.toJSON(),
+        error: logErrorResponse "league.save"
+        success: (league) ->
+          period1 = new Period
+            leagueId: league.id
+            category: "daily"
+            startDate: new Date(2011,1,2)
+            endDate: new Date(2011,1,3)
+            final: true
+          period1.save period1.toJSON(),
+            error: logErrorResponse "period1.save"
+            success: (period1) ->
+              period2 = new Period
+                leagueId: league.id
+                category: "daily"
+                startDate: new Date(2011,1,3)
+                endDate: new Date(2011,1,4)
+                final: true
+              period2.save period2.toJSON(),
+                error: logErrorResponse "period2.save"
+                success: (period2) ->
+                  userPeriod1 = new UserPeriod
+                    userId: user.id
+                    periodId: period1.id
+                    periodStartDate: period1.get("startDate")
+                    periodCategory: period1.get("category")
+                    leagueId: league.id
+                    metrics:
+                      points: 10
+                      stars: 1
+                      risks: 4
+                  userPeriod1.save userPeriod1.toJSON(),
+                    error: logErrorResponse "userPeriod1.save"
+                    success: (userPeriod1) ->
+                      userPeriod2 = new UserPeriod
+                        userId: user.id
+                        periodId: period2.id
+                        periodStartDate: period2.get("startDate")
+                        periodCategory: period2.get("category")
+                        leagueId: league.id
+                        metrics:
+                          points: 100
+                          stars: 10
+                          ribbons: 1
+                      userPeriod2.save userPeriod2.toJSON(),
+                        error: logErrorResponse "userPeriod2.save"
+                        success: (userPeriod2) ->                          
+                          x = mock.get "/metrics?userId=#{user.id}&leagueId=#{league.id}&endDate=#{escape((new Date(2011,1,1)).toJSON())}", { accept: "application/json" }
+                          x.on "success", (response) ->
+                            test.ok response
+                            test.equal response.status, 200
+                            metrics = response.body
+                            test.equal _(metrics).keys().length, 0
+                            x = mock.get "/metrics?userId=#{user.id}&leagueId=#{league.id}&endDate=#{escape((new Date(2011,1,2)).toJSON())}", { accept: "application/json" }
+                            x.on "success", (response) ->
+                              test.equal response.status, 200
+                              metrics = response.body
+                              test.equal metrics.points, 10
+                              test.equal metrics.stars, 1
+                              test.equal metrics.risks, 4
+                              x = mock.get "/metrics?userId=#{user.id}&leagueId=#{league.id}&endDate=#{escape((new Date(2011,1,6)).toJSON())}", { accept: "application/json" }
+                              x.on "success", (response) ->
+                                test.equal response.status, 200
+                                metrics = response.body
+                                test.equal metrics.points, 110
+                                test.equal metrics.stars, 11
+                                test.equal metrics.risks, 4
+                                test.equal metrics.ribbons, 1
+                                x = mock.get "/metrics?userId=#{user.id}&leagueId=#{league.id}&startDate=#{escape((new Date(2011,1,3)).toJSON())}", { accept: "application/json" }
+                                x.on "success", (response) ->
+                                  test.equal response.status, 200
+                                  metrics = response.body
+                                  test.equal metrics.points, 100
+                                  test.equal metrics.stars, 10
+                                  test.equal metrics.ribbons, 1    
+                                  x = mock.get "/metrics?userId=#{user.id}&leagueId=#{league.id}&startDate=#{escape((new Date(2011,1,6)).toJSON())}", { accept: "application/json" }
+                                  x.on "success", (response) ->
+                                    test.equal response.status, 200
+                                    metrics = response.body
+                                    test.equal _(metrics).keys().length,0
+                                    userPeriod1.destroy
+                                      success: ->
+                                        userPeriod2.destroy
+                                          success: ->
+                                            period2.destroy
+                                              success: ->
+                                                period1.destroy
+                                                  success: ->
+                                                    league.destroy
+                                                      success: ->
+                                                        user.destroy
+                                                          success: ->
+                                                            test.done()
+
+testPeriodGet = (test) -> test.ok false, "implement /period GET"                                                                      

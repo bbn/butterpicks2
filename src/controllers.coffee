@@ -48,6 +48,22 @@ exports.router.map ->
             email: model.get "email"
 
 
+  @get("/metrics").bind (req,res,params) ->
+    user = new User { _id: params.userId }
+    user.fetch
+      error: (__,err) -> res.send err.status_code,{},err
+      success: (user) ->
+        params.startDate = new Date(params.startDate) if params.startDate
+        params.endDate = new Date(params.endDate) if params.endDate
+        user.fetchMetrics
+          leagueId: params.leagueId
+          startDate: params.startDate
+          endDate: params.endDate
+          error: (__,err) -> res.send err.status_code,{},err
+          success: (metrics) -> res.send metrics
+
+
+
   @get("/butters").bind (req,res,params) ->
     return res.send 400,{},{error:"no userId param"} unless params.userId
     u = new User {_id:params.userId}
