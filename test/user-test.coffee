@@ -13,8 +13,6 @@ League = models.League
 Period = models.Period
 UserPeriod = models.UserPeriod
 
-console.log "TODO test createdAt default. loading existing model does not replace with default?"
-
 logErrorResponse = (message) ->
   return (model,response) ->
     console.log "ERROR: #{message} -> response: #{util.inspect response}"
@@ -53,22 +51,27 @@ exports.testFetchUser =
     @userAttributes = 
       facebookId: 751395611
       email: "ben@mainsocial.com" 
+      createdDate: new Date(2000,1,1)
     u = new User(@userAttributes)
     u.save u.toJSON(),
       error: (model,response) -> console.log "error saving new user"
       success: (model,response) =>
         @userId = model.id
+        @userCreatedDate = model.get("createdDate")
         callback()
 
   testFetchUser: (test) ->
     id = @userId
     test.ok id, "should have passed an id via this keyword"
+    test.ok @userCreatedDate, "@userCreatedDate exists"
     u = new User({ id:id })
+    test.ok (@userCreatedDate < u.get("createdDate")), "new User has a later createdDate date"
     u.fetch
       error: (model,response) -> console.log "response: #{util.inspect response}"
       success: (model,response) =>
         test.ok model
         test.equal model.id, id, "same id"
+        test.equal model.get("createdDate")-@userCreatedDate,0, "createdAt same as @userCreatedAt"
         test.equal model.get("facebookId"),@userAttributes.facebookId,"same facebookId"
         test.equal model.get("email"),@userAttributes.email,"same email"
         test.equal model.get("doctype"),"User"
