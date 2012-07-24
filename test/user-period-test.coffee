@@ -375,8 +375,16 @@ exports.testDeterminePrizes =
                                         callback()
   
   tearDown: (callback) -> 
-    console.log "FIXME - delete all models"
-    callback()
+    @prizeThatRequiresMoreGames.destroy
+      success: => @prizeWithoutPrerequisite.destroy
+        success: => @prizeThatShouldBeAbleToWin.destroy
+          success: => @pick.destroy
+            success: => @game.destroy
+              success: => @userPeriod.destroy
+                success: => @user.destroy
+                  success: => @period.destroy
+                    success: => @league.destroy
+                      success: => callback()
 
   testDeterminePrizes: (test) ->
     test.ok @user, "@user is defined"

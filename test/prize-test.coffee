@@ -133,4 +133,9 @@ exports.testFetchAllForLeagueId = (test) ->
 										error: logErrorResponse "Prize.fetchAllForLeague"
 										success: (prizes) =>
 											test.equal prizes.length,2
-											test.done()
+											@prize3.destroy
+												success: => @prize2.destroy
+													success: => @prize1.destroy
+														success: => @league.destroy
+															success: =>
+																test.done()
