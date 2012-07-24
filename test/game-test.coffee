@@ -28,8 +28,6 @@ logErrorResponse = (message) ->
     console.log "#{message} -> response: #{require('util').inspect response}"
 
 
-console.log "TODO replace team info with teamId, reference to specific team model"
-
 exports.couchViewForMostRecentlyUpdatedGame = (test) ->
   gameUpdater.getMostRecentlyUpdatedGameDate
     error: logErrorResponse
