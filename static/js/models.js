@@ -2945,7 +2945,7 @@ require.define("/models/league.js", function (require, module, exports, __dirnam
       abbreviation: null,
       name: null,
       draws: false,
-      basePeriodCategory: null
+      basePeriodCategory: "daily"
     };
 
     return League;

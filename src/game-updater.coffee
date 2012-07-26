@@ -45,12 +45,12 @@ updateGames = (options) ->
         console.log "+++ #{count} games to update."
         for gameData in body
           gameData.statsKey = gameData.key
-          requestOptions = 
-            url: "http://localhost/game"
-            body: JSON.stringify gameData
-            json: true
-          request.post requestOptions, (err, clientResponse, body) ->
-            console.log "err: #{err}"
-            console.log "body: #{body}"
-            if options and options.poll then poll() unless --count
+          Game.createOrUpdateGameFromStatsAttributes gameData,
+            error: (__,response) -> 
+              console.log "!!! updating error: #{response}"
+              if options and options.poll then poll() unless --count
+            success: (game,response) -> 
+              console.log "+++ updated game #{game.id}"
+              if options and options.poll then poll() unless --count
+
 

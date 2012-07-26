@@ -11,4 +11,5 @@ module.exports = class League extends Backbone.Model
     abbreviation: null
     name: null
     draws: false
-    basePeriodCategory: null
+    basePeriodCategory: "daily"
+    

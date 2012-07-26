@@ -23,6 +23,18 @@ League.fetchForStatsKey = (statsKey,options) ->
     league = new League(body.rows[0].doc)
     options.success league
 
+League.fetchOrCreateForStatsKey = (statsKey,options) ->
+  League.fetchForStatsKey statsKey,
+    error: options.error
+    success: (league,response) ->
+      return options.success(league) if league
+      league = new League
+        statsKey: statsKey
+      league.save league.toJSON(),
+        error: options.error
+        success: (league) ->
+          options.success league
+
 
 User::getButters = (options) ->
   viewParams =
@@ -87,10 +99,10 @@ Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
 
 
 Game::updateFromStatsAttributes = (params,options) ->
-  League.fetchForStatsKey params.leagueStatsKey,
+  League.fetchOrCreateForStatsKey params.leagueStatsKey,
     error: options.error
     success: (league,response) =>
-      return options.error(null,"no league for statsKey #{params.leagueStatsKey}") unless league
+      return options.error(null,"no league for statsKey") unless league
       @set({leagueId:league.id}) unless @get("leagueId")
       @set({startDate:new Date(params.starts_at*1000)}) unless @get("startDate")
       @fetchBasePeriodId
@@ -193,6 +205,7 @@ Period.getCouchId = (params) ->
   periodId
 
 
+console.log "TODO test Period.getOrCreateBasePeriodForGame"
 Period.getOrCreateBasePeriodForGame = (game,options) ->
   game.fetchBasePeriodId
     error: options.error

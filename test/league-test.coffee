@@ -59,3 +59,23 @@ exports.testFetchForStatsKey =
         test.ok model
         test.equal model.id, @league.id
         test.done()
+
+
+exports.testFetchOrCreateForStatsKey = (test) ->
+  statsKey = "2i76qwfuyasjhcbljsa"
+  League.fetchOrCreateForStatsKey statsKey,
+    error: logErrorResponse "wtf"
+    success: (league) ->
+      test.ok league
+      test.equal league.get("statsKey"),statsKey
+      test.ok league.id
+      League.fetchOrCreateForStatsKey statsKey,
+        error: logErrorResponse "wtf"
+        success: (league) ->
+          test.ok league
+          test.equal league.get("statsKey"),statsKey
+          test.ok league.id
+          league.destroy
+            success: -> test.done()
+
+
