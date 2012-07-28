@@ -79,9 +79,10 @@ exports.router.map ->
 
 
   @get("/period").bind (req,res,params) ->
-    for param in ["category","leagueId","date"]
-      return res.send 400,{},{error:"no #{param} param"} unless params[param]
-    periodId = Period.getCouchId params
+    unless params.id
+      for param in ["category","leagueId","date"]
+        return res.send 400,{},{error:"invalid arguments"} unless params[param]
+    periodId = params.id or Period.getCouchId params
     p = new Period({ _id:periodId })
     p.fetch
       error: (model,response) -> res.send response.status_code,{},response

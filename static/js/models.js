@@ -2958,9 +2958,13 @@ require.define("/models/league.js", function (require, module, exports, __dirnam
 
 require.define("/models/game.js", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Backbone, Game,
+  var Backbone, Game, League, Period,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  League = require("./league");
+
+  Period = require("./period");
 
   Backbone = require("backbone");
 
@@ -3007,18 +3011,60 @@ require.define("/models/game.js", function (require, module, exports, __dirname,
       }
     };
 
-    Game.prototype.getCouchId = function() {
-      return "game_" + (this.get('statsKey'));
+    Game.prototype.league = null;
+
+    Game.prototype.validate = function(attr) {
+      if (attr.doctype !== "Game") return "bad doctype";
+      if (!attr.statsKey) return "no statsKey";
+      if (!attr.leagueId) return "no leagueId";
+      if (!attr.startDate) return "no startDate";
     };
 
     Game.prototype.initialize = function(attr) {
-      if (this.get("statsKey")) {
-        if (!this.get("_id")) {
-          return this.set({
-            _id: this.getCouchId()
-          });
-        }
+      if (!this.get("_id")) {
+        return this.set({
+          _id: this.getCouchId()
+        });
       }
+    };
+
+    Game.couchIdForStatsKey = function(statsKey) {
+      return "game_" + statsKey;
+    };
+
+    Game.prototype.getCouchId = function() {
+      return this.constructor.couchIdForStatsKey(this.get("statsKey"));
+    };
+
+    Game.prototype.fetchLeague = function(options) {
+      var _this = this;
+      if (this.league) return options.success(this.league);
+      return League.fetchById({
+        id: this.get("leagueId"),
+        error: options.error,
+        success: function(league) {
+          _this.league = league;
+          return options.success(_this.league);
+        }
+      });
+    };
+
+    Game.prototype.fetchBasePeriodId = function(options) {
+      var _this = this;
+      if (!this.get("leagueId")) return options.error(null, "no leagueId");
+      if (!this.get("startDate")) return options.error(null, "no startDate");
+      return this.fetchLeague({
+        error: options.error,
+        success: function(league) {
+          var id;
+          id = Period.getCouchId({
+            leagueId: league.id,
+            category: league.get("basePeriodCategory"),
+            date: _this.get("startDate")
+          });
+          return options.success(id);
+        }
+      });
     };
 
     Game.prototype.secondsUntilDeadline = function() {
@@ -3107,6 +3153,26 @@ require.define("/models/period.js", function (require, module, exports, __dirnam
       if (!attr.category) return "no category attribute";
       if (!attr.startDate) return "no startDate attribute";
       if (!attr.endDate) return "no endDate attribute";
+    };
+
+    Period.prototype.initialize = function(attr) {
+      if (!attr._id) {
+        return this.set({
+          _id: this.constructor.getCouchId(attr)
+        });
+      }
+    };
+
+    Period.getCouchId = function(params) {
+      var d, dateString;
+      switch (params.category) {
+        case "daily":
+          d = new Date(params.date || params.startDate);
+          dateString = "" + (d.getFullYear()) + "-" + (d.getMonth() + 1) + "-" + (d.getDate());
+          return "" + params.leagueId + "_" + params.category + "_" + dateString;
+        case "lifetime":
+          return "" + params.leagueId + "_" + params.category;
+      }
     };
 
     return Period;

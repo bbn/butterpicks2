@@ -35,6 +35,14 @@ League.fetchOrCreateForStatsKey = (statsKey,options) ->
         success: (league) ->
           options.success league
 
+console.log "TODO test League.fetchById"
+League.fetchById = (options) ->
+  league = new League { _id:options.id }
+  league.fetch
+    error: options.error
+    success: (league) ->
+      options.success league
+
 
 User::getButters = (options) ->
   viewParams =
@@ -88,48 +96,61 @@ User::fetchMetrics = (options) ->
   #   ]
 
 
-Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
-  g = new Game { statsKey: params.statsKey }
+Game.fetchByStatsKey = (options) ->
+  g = new Game { _id: Game.couchIdForStatsKey options.statsKey }
   g.fetch
-    error: (game,response) ->
-      return options.error(game,response) unless response.status_code == 404
-      game.updateFromStatsAttributes params,options
-    success: (game,response) ->
-      game.updateFromStatsAttributes params,options
+    error: options.error
+    success: options.success
 
 
-Game::updateFromStatsAttributes = (params,options) ->
+Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
   League.fetchOrCreateForStatsKey params.leagueStatsKey,
     error: options.error
     success: (league,response) =>
-      return options.error(null,"no league for statsKey") unless league
-      @set({leagueId:league.id}) unless @get("leagueId")
-      @set({startDate:new Date(params.starts_at*1000)}) unless @get("startDate")
-      @fetchBasePeriodId
-        error: options.error
-        success: (basePeriodId) =>
-          oldBasePeriodId = basePeriodId
-          attributes = Game.attrFromStatServerParams params
-          attributes.leagueId = league.id
-          @save attributes, 
+      attributes = Game.attrFromStatServerParams params
+      attributes.leagueId = league.id
+      Game.fetchByStatsKey
+        statsKey: params.statsKey    
+        error: (game,response) ->
+          return options.error(game,response) unless response.status_code == 404
+          game.save attributes,
             error: options.error
-            success: (game,gameCouchResponse) =>
+            success: (game) ->
               game.fetchBasePeriodId
                 error: options.error
                 success: (newBasePeriodId) =>
                   periodUpdateJobParams =
                     periodId: newBasePeriodId
                     leagueId: league.id
-                    category: league.basePeriodCategory
+                    category: league.get "basePeriodCategory"
                     withinDate: game.get "startDate"
                   PeriodUpdateJob.create periodUpdateJobParams,
                     error: options.error
-                    success: =>
-                      unless oldBasePeriodId and oldBasePeriodId != newBasePeriodId
-                        return options.success game,gameCouchResponse
-                      PeriodUpdateJob.create {periodId: oldBasePeriodId},
+                    success: -> options.success game
+        success: (game,response) ->
+          game.fetchBasePeriodId
+            error: options.error
+            success: (basePeriodId) ->
+              oldBasePeriodId = basePeriodId
+              game.save attributes, 
+                error: options.error
+                success: (game) ->
+                  game.fetchBasePeriodId
+                    error: options.error
+                    success: (newBasePeriodId) ->
+                      periodUpdateJobParams =
+                        periodId: newBasePeriodId
+                        leagueId: league.id
+                        category: league.basePeriodCategory
+                        withinDate: game.get "startDate"
+                      PeriodUpdateJob.create periodUpdateJobParams,
                         error: options.error
-                        success: -> options.success game,gameCouchResponse 
+                        success: ->
+                          unless oldBasePeriodId and oldBasePeriodId != newBasePeriodId
+                            return options.success game
+                          PeriodUpdateJob.create {periodId: oldBasePeriodId},
+                            error: options.error
+                            success: -> options.success game 
 
 
 Game.attrFromStatServerParams = (params) ->
@@ -152,19 +173,6 @@ Game.attrFromStatServerParams = (params) ->
       text: params.status
       final: params.final
     legit: params.legit
-
-
-Game::fetchBasePeriodId = (options) ->
-  return options.error(null,"param error") unless @get("leagueId") and @get("startDate")
-  league = new League {_id:@get("leagueId")}
-  league.fetch
-    error: options.error
-    success: (league,response) =>
-      id = Period.getCouchId
-        leagueId: league.id
-        category: league.get "basePeriodCategory"
-        date: @get "startDate"
-      options.success id
 
 
 
@@ -192,17 +200,6 @@ Pick.fetchForUserAndGame = (params,options) ->
   pick = new Pick { _id: pickId }
   pick.fetch options
 
-
-
-Period.getCouchId = (params) ->
-  switch params.category
-    when "daily"
-      d = new Date(params.date)
-      dateString = "#{d.getFullYear()}-#{d.getMonth()+1}-#{d.getDate()}"
-      periodId = "#{params.leagueId}_#{params.category}_#{dateString}"
-    when "lifetime"
-      periodId = "#{params.leagueId}_#{params.category}"
-  periodId
 
 
 console.log "TODO test Period.getOrCreateBasePeriodForGame"

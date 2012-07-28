@@ -39,10 +39,6 @@ exports.createUserPeriod =
               category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 11, 2012")
               endDate: new Date("Jan 12, 2012")
-            @periodData.id = Period.getCouchId
-              category: @league.get("basePeriodCategory")
-              date: @periodData.startDate
-              leagueStatsKey: @league.get("statsKey")
             @period = new Period(@periodData)
             @period.save @period.toJSON(),
               error: -> logErrorResponse "saving period"
@@ -102,10 +98,6 @@ exports.testFetchUserPeriod =
               category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 11, 2012")
               endDate: new Date("Jan 12, 2012")
-            @periodData.id = Period.getCouchId
-              category: @league.get("basePeriodCategory")
-              date: @periodData.startDate
-              leagueStatsKey: @league.get("statsKey")
             @period = new Period(@periodData)
             @period.save @period.toJSON(),
               error: -> logErrorResponse "saving period"
@@ -167,10 +159,6 @@ exports.testFetchPicks =
           category: @league.get "basePeriodCategory"
           startDate: new Date("Mar 11, 2012")
           endDate: new Date("Mar 12, 2012")
-        @periodData.id = Period.getCouchId
-          category: @league.get("basePeriodCategory")
-          date: @periodData.startDate
-          leagueStatsKey: @league.get("statsKey")
         @period = new Period(@periodData)
         @period.save @period.toJSON(),
           success: =>
@@ -287,10 +275,6 @@ exports.testDeterminePrizes =
           category: @league.get "basePeriodCategory"
           startDate: new Date("Mar 21, 2012")
           endDate: new Date("Mar 22, 2012")
-        @periodData.id = Period.getCouchId
-          category: @league.get("basePeriodCategory")
-          date: @periodData.startDate
-          leagueStatsKey: @league.get("statsKey")
         @period = new Period(@periodData)
         @period.save @period.toJSON(),
           success: =>
@@ -415,6 +399,14 @@ exports.testDeterminePrizes =
         test.done()
 
 
-testFetchUser: (test) -> test.ok false, "implement testFetchUser"
-testFetchPeriod: (test) -> test.ok false, "implement testFetchPeriod"
-testFetchGames: (test) -> test.ok false, "implement testFetchGames"
+exports.testFetchUser = (test) -> 
+  test.ok false, "implement testFetchUser"
+  test.done()
+
+exports.testFetchPeriod = (test) -> 
+  test.ok false, "implement testFetchPeriod"
+  test.done()
+
+exports.testFetchGames = (test) -> 
+  test.ok false, "implement testFetchGames"
+  test.done()

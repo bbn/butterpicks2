@@ -1,3 +1,6 @@
+League = require "./league"
+Period = require "./period"
+
 Backbone = require "backbone"
 
 module.exports = class Game extends Backbone.Model
@@ -31,11 +34,46 @@ module.exports = class Game extends Backbone.Model
       away: 0
       draw: 0
 
-  getCouchId: ->
-    "game_#{@get 'statsKey'}"
+  league: null
+
+  validate: (attr) ->
+    return "bad doctype" unless attr.doctype=="Game"
+    return "no statsKey" unless attr.statsKey
+    return "no leagueId" unless attr.leagueId
+    return "no startDate" unless attr.startDate
 
   initialize: (attr) ->
-    if @get("statsKey") then @set({_id:@getCouchId()}) unless @get("_id")
+    @set({_id:@getCouchId()}) unless @get("_id")
+
+  @couchIdForStatsKey: (statsKey) ->
+    "game_#{statsKey}"
+
+  getCouchId: ->
+    @constructor.couchIdForStatsKey @get("statsKey")
+
+
+  fetchLeague: (options) ->
+    return options.success(@league) if @league
+    League.fetchById
+      id: @get "leagueId"
+      error: options.error
+      success: (league) =>
+        @league = league
+        options.success @league
+
+  fetchBasePeriodId: (options) ->
+    return options.error(null,"no leagueId") unless @get("leagueId")
+    return options.error(null,"no startDate") unless @get("startDate")
+    @fetchLeague
+      error: options.error
+      success: (league) =>
+        id = Period.getCouchId
+          leagueId: league.id
+          category: league.get "basePeriodCategory"
+          date: @get "startDate"
+        options.success id
+
+
 
   secondsUntilDeadline: ->
     (@get("startDate") - new Date())/1000

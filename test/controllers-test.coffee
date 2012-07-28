@@ -174,10 +174,6 @@ exports.testUserPeriodGetController =
               category: @league.get "basePeriodCategory"
               startDate: new Date("Jan 21, 2012")
               endDate: new Date("Jan 22, 2012")
-            @periodData.id = Period.getCouchId
-              category: @league.get "basePeriodCategory"
-              date: @periodData.startDate
-              leagueId: @league.id
             @period = new Period(@periodData)
             @period.save @period.toJSON(),
               error: logErrorResponse "saving period"
@@ -320,7 +316,10 @@ exports.testPickGet =
     @user.save @user.toJSON(),
       error: logErrorResponse "user save"
       success: (u,response) =>
-        @game = new Game()
+        @game = new Game
+          startDate: new Date(2010,1,1)
+          leagueId: "asdkjhlskdjhas"
+          statsKey: "sadjklshakdjhsalkjdhs"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -367,6 +366,8 @@ exports.testPickPost =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:7})
+          leagueId: "sajkldhakjshdlkjash"
+          statsKey: "21yqwfusalik"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -436,6 +437,8 @@ exports.testPickPostForExpiredGame =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:-7})
+          leagueId: "ouasniduhilnsudhs"
+          statsKey: "asdlsadjkasdkl"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -482,6 +485,8 @@ exports.testPickPostForInvalidParams =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:7})
+          leagueId: "sjdhalksjhdlkajs"
+          statsKey: "sadkjsalkdjslakjl"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -528,6 +533,8 @@ exports.testPickPostWithNoButters =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:7})
+          leagueId: "dsalkdjlaskdjlska"
+          statsKey: "SAdlskjalksdjlkj"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: -> callback()
@@ -620,6 +627,8 @@ exports.testPickPut =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:7})
+          leagueId: "sadksdlksajdlkajs"
+          statsKey: "Sdasdasdkasldksal"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: => 
@@ -704,6 +713,8 @@ exports.testPickButters =
       success: (u,response) =>
         @game = new Game
           startDate: (new Date()).add({days:7})
+          leagueId: "dasdasdasdskajfkj21398rqwfusajb"
+          statsKey: "18o72rtqwfgskajhkga8sghj"
         @game.save @game.toJSON(),
           error: -> logErrorResponse "saving game"
           success: => 
@@ -920,4 +931,41 @@ exports.testUserFetchMetricsController = (test) ->
                                                           success: ->
                                                             test.done()
 
-testPeriodGet = (test) -> test.ok false, "implement /period GET"                                                                      
+
+exports.testPeriodGet = (test) -> 
+  league = new League
+  league.save league.toJSON(),
+    error: logErrorResponse "league.save"
+    success: (league) ->
+      period = new Period
+        leagueId: league.id
+        category: "daily"
+        startDate: new Date(2011,1,2)
+        endDate: new Date(2011,1,3)
+        final: true
+      period.save period.toJSON(),
+        error: logErrorResponse "period.save"
+        success: (period) ->
+          x = mock.get "/period?id=#{period.id}", {accept:"application/json"}
+          x.on "success", (response) ->
+            data = response.body
+            test.equal data.id, period.id
+            test.equal data.category, period.get("category")
+            test.equal data.startDate, period.get("startDate").toJSON()
+            test.equal data.endDate, period.get("endDate").toJSON()
+            x = mock.get "/period?category=daily&date=#{escape(period.get('startDate').toJSON())}&leagueId=#{league.id}", {accept:"application/json"}
+            x.on "success", (response) ->
+              data = response.body
+              test.equal data.id, period.id
+              test.equal data.category, period.get("category")
+              test.equal data.startDate, period.get("startDate").toJSON()
+              test.equal data.endDate, period.get("endDate").toJSON()
+              period.destroy
+                success: -> league.destroy
+                  success: ->
+                    test.done()
+
+
+
+
+                                                                      

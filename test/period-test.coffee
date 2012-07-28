@@ -40,10 +40,6 @@ exports.testGetDailyPeriod =
           category: @league.get "basePeriodCategory"
           startDate: new Date("Jan 1, 2010")
           endDate: new Date("Jan 2, 2010")
-        @periodData.id = Period.getCouchId
-          leagueId: @league.id
-          category: @league.get "basePeriodCategory"
-          date: @periodData.startDate
         p = new Period @periodData
         p.save p.toJSON(),
           error: logErrorResponse "p.save"
@@ -96,10 +92,6 @@ exports.testFetchAssociatedModels =
           category: @league.get "basePeriodCategory"
           startDate: new Date("Jan 11, 2010")
           endDate: new Date("Jan 12, 2010")
-        @periodData.id = Period.getCouchId
-          category: @league.get("basePeriodCategory")
-          date: @periodData.startDate
-          leagueId: @league.id
         p = new Period(@periodData)
         p.save p.toJSON(),
           error: -> logErrorResponse "p.save"
@@ -125,6 +117,7 @@ exports.testFetchAssociatedModels =
         g1 = new Game
           leagueId: @league.id
           startDate: (new Date(@periodData.startDate)).addHours(1)
+          statsKey: "872roqfgjhbs7uiljks"
         g1.save g1.toJSON(),
           error: logErrorResponse "g1.save"
           success: (game1,response) =>
@@ -139,6 +132,7 @@ exports.testFetchAssociatedModels =
                 g2 = new Game
                   leagueId: @league.id
                   startDate: new Date(2010,1,16,17,00)
+                  statsKey: "7uihqlwfjslsalkjas"
                 g2.save g2.toJSON(),
                   error: logErrorResponse "g2.save"
                   success: (game2,response) =>
@@ -205,10 +199,50 @@ exports.testFetchAssociatedModels =
                                               success: => test.done()
 
 
-testFetchPeriodMetrics = (test) ->
-  test.ok false, "implement testFetchPeriodMetrics"
-  test.done()
-
-testPeriodFinal = (test) ->
-  test.ok false, "implement testPeriodFinal"
-  test.done()
+exports.testPeriodFinal = (test) ->
+  leagueId = "fghdak28oihdaskjbakdh"
+  period = new Period
+    leagueId: leagueId
+    category: "daily"
+    startDate: new Date(2011,0,1)
+    endDate: new Date(2011,0,2)
+  period.save period.toJSON(),
+    error: logErrorResponse "period.save"
+    success: (period) ->
+      game1 = new Game
+        leagueId: leagueId
+        startDate: new Date(2011,0,1,12)
+        statsKey: "daskjds8ayuhkj"
+        status:
+          final: false
+      game1.save game1.toJSON(),
+        error: logErrorResponse "game1.save"
+        success: (game1) ->
+          game2 = new Game
+            statsKey: "sakjhsaduysailugd"
+            leagueId: leagueId
+            startDate: new Date(2011,0,1,11)
+            status:
+              final: true
+          game2.save game2.toJSON(),
+            error: logErrorResponse "game2.save"
+            success: (game2) ->
+              period.fetchMetrics
+                error: logErrorResponse "period.fetchMetrics"
+                success: (metrics) ->
+                  test.equal metrics.games, 2
+                  test.equal metrics.allGamesFinal, false
+                  game1.save {status:{final:true}},
+                    error: logErrorResponse "game1.save 2"
+                    success: (game1) ->
+                      period.games = null
+                      period.fetchMetrics
+                        error: logErrorResponse "period.fetchMetrics 2"
+                        success: (metrics) ->
+                          test.equal metrics.games, 2
+                          test.equal metrics.allGamesFinal, true
+                          game2.destroy
+                            success: -> game1.destroy
+                              success: -> period.destroy
+                                success: ->
+                                  test.done()

@@ -133,10 +133,6 @@ exports.userPeriodUpdateJobWorkDeletedPeriod =
               category: @league.get "basePeriodCategory"
               startDate: new Date("Feb 11, 2010")
               endDate: new Date("Feb 12, 2010")
-            periodData.id = Period.getCouchId
-              category: periodData.category
-              date: periodData.startDate
-              leagueStatsKey: @league.get "statsKey"
             @period = new Period periodData
             @period.save @period.toJSON(),
               error: -> logErrorResponse
@@ -199,10 +195,6 @@ exports.userPeriodUpdateJobWorkUpdatePoints =
               category: @league.get "basePeriodCategory"
               startDate: new Date("Feb 11, 2010")
               endDate: new Date("Feb 12, 2010")
-            periodData.id = Period.getCouchId
-              category: periodData.category
-              date: periodData.startDate
-              leagueStatsKey: @league.get "statsKey"
             @period = new Period periodData
             @period.save @period.toJSON(),
               error: -> logErrorResponse

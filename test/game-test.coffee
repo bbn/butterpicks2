@@ -28,14 +28,46 @@ logErrorResponse = (message) ->
     console.log "#{message} -> response: #{require('util').inspect response}"
 
 
+
+exports.testFetchByStatsKey = (test) ->
+
+
+  g = new Game
+    statsKey: "1p92quwgdbasasfkjhaslkdjha"
+    startDate: new Date("Dec 1, 1999")
+    leagueId: "taksgkadsgkadgksy"
+
+  Game.fetchByStatsKey
+    statsKey: g.get("statsKey")
+    success: -> console.log "unexpected success!!"
+    error: (__,response) ->
+      test.equal response.status_code, 404
+      g.save g.toJSON(),
+        error: logErrorResponse "g.save"
+        success: (g,response) ->
+          test.ok g
+          test.ok g.id
+          Game.fetchByStatsKey
+            statsKey: g.get("statsKey")
+            error: logErrorResponse "Game.fetchByStatsKey 2"
+            success: (g2) ->
+              test.equal g2.get("statsKey"), g.get("statsKey")
+              test.equal g2.id, g.id
+              g.destroy
+                success: ->
+                  test.done()
+
+
 exports.couchViewForMostRecentlyUpdatedGame = (test) ->
   gameUpdater.getMostRecentlyUpdatedGameDate
     error: logErrorResponse
     success: (d0,response) ->
       test.equal d0,null,"date should be null. #{d0}"
       g = new Game
+        leagueId: "jscjkadhjks"
         statsKey: "sahgdjhagsjd281"
         statsLatestUpdateDate: new Date("Jan 1 2000")
+        startDate: new Date("Dec 1, 1999")
       g.save g.toJSON(),
         error: logErrorResponse
         success: (model,response) ->
@@ -47,8 +79,10 @@ exports.couchViewForMostRecentlyUpdatedGame = (test) ->
               test.ok d1
               test.equal d1.toJSON(), model.get("statsLatestUpdateDate").toJSON()
               g2 = new Game
+                leagueId: "akwgbouwniu"
                 statsKey: "1zg8z1sg8"
                 statsLatestUpdateDate: new Date("Feb 1 2000")
+                startDate: new Date("Dec 1 1999")
               g2.save g2.toJSON(),
                 error: logErrorResponse
                 success: (model2,response) ->
@@ -118,8 +152,8 @@ exports.testGamePost =
       status: "7th inning"
       final: false
       legit: true
-    x = mock.post "/game", { accept: "application/json" }, JSON.stringify data
-    x.on 'success', (response) =>
+    y = mock.post "/game", { accept: "application/json" }, JSON.stringify data
+    y.on 'success', (response) =>
       test.equal response.status,201
       test.ok response.body
       gameData = response.body
@@ -154,7 +188,7 @@ exports.testGamePost =
           jobs[0].destroy
             error: logErrorResponse
             success: ->
-              g = new Game({id:gameData.id})
+              g = new Game({_id:gameData.id})
               g.fetch
                 error: logErrorResponse
                 success: (model,response) ->
@@ -356,6 +390,7 @@ exports.couchViewForGamesByLeagueAndStartDate = (test) ->
         test.ok body.rows
         test.equal body.rows.length,0
         g = new Game
+          statsKey: "2o87qtfguasljbsa"
           leagueId: league.id
           startDate: gameDate
         g.save g.toJSON(),
@@ -379,6 +414,7 @@ exports.couchViewForGamesByLeagueAndStartDate = (test) ->
               test.equal body.rows[0].doc.leagueId, league.id
               test.equal body.rows[0].doc.startDate, gameDate.toJSON()
               gB = new Game
+                statsKey: "skajhdgao87atwg"
                 leagueId: league.id
                 startDate: laterGameDate
               gB.save gB.toJSON(),
@@ -415,6 +451,8 @@ exports.gameModelTest = (test) ->
   earlierDate = (new Date(now)).add {hours:-1}
   g = new Game
     startDate: earlierDate
+    statsKey: "adsjkhnxkiy2jshkj"
+    leagueId: "alkjsno8x72qgwasjlhg"
   test.ok (g.secondsUntilDeadline() + 60*60) <= 0
   test.ok (g.secondsUntilDeadline() + (60*60+1)) > 0
   test.equal g.deadlineHasPassed(), true
@@ -456,5 +494,4 @@ exports.gameModelTest = (test) ->
   test.equal g.homeWin(),false
   test.equal g.awayWin(),false
   test.done()
-
 

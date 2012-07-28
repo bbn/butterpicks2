@@ -110,10 +110,6 @@ exports.periodUpdateJobWork =
           category: @league.get "basePeriodCategory"
           startDate: new Date("Jan 1, 2011")
           endDate: new Date("Jan 2, 2011")
-        @periodData.id = Period.getCouchId
-          leagueId: @league.id
-          category: @periodData.category
-          date: @periodData.startDate
         p = new Period(@periodData)
         p.save p.toJSON(),
           error: -> logErrorResponse "p.save"

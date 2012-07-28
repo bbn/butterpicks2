@@ -19,6 +19,8 @@ logErrorResponse = (message) ->
 exports.modelTests = (test) ->
   game = new Game
     startDate: (new Date()).add({days:10})
+    statsKey: "iqfkyashv"
+    leagueId: "1278orqwugfhjsamn"
   pick = new Pick()
   pick.game = game
   test.equal pick.editable(), true
