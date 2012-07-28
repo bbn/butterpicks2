@@ -400,13 +400,142 @@ exports.testDeterminePrizes =
 
 
 exports.testFetchUser = (test) -> 
-  test.ok false, "implement testFetchUser"
-  test.done()
+  league = new League
+    statsKey: "21oxy8iluhdkjashk"
+    basePeriodCategory: "daiy"
+  league.save league.toJSON(),
+    success: ->
+      period = new Period
+        leagueId: league.id
+        category: league.get "basePeriodCategory"
+        startDate: new Date("Mar 21, 2012")
+        endDate: new Date("Mar 22, 2012")
+      period.save period.toJSON(),
+        success: ->
+          user = new User
+          user.save user.toJSON(),
+            success: ->
+              params = 
+                userId: user.id
+                periodId: period.id
+              UserPeriod.createForUserAndPeriod params,
+                error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                success: (userPeriod) ->
+                  test.ok userPeriod
+                  test.equal userPeriod.user, null
+                  userPeriod.fetchUser
+                    error: logErrorResponse "userPeriod.fetchUser"
+                    success: (user2) ->
+                      test.ok user2
+                      test.equal user2.id, user.id
+                      test.equal userPeriod.user.id, user.id
+                      userPeriod.destroy
+                        success: -> user.destroy
+                          success: -> period.destroy
+                            success: -> league.destroy
+                              success: ->
+                                test.done()
 
 exports.testFetchPeriod = (test) -> 
-  test.ok false, "implement testFetchPeriod"
-  test.done()
+  league = new League
+    statsKey: "21oxy8iluhdkjashk"
+    basePeriodCategory: "daiy"
+  league.save league.toJSON(),
+    success: ->
+      period = new Period
+        leagueId: league.id
+        category: league.get "basePeriodCategory"
+        startDate: new Date("Mar 21, 2012")
+        endDate: new Date("Mar 22, 2012")
+      period.save period.toJSON(),
+        success: ->
+          user = new User
+          user.save user.toJSON(),
+            success: ->
+              params = 
+                userId: user.id
+                periodId: period.id
+              UserPeriod.createForUserAndPeriod params,
+                error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                success: (userPeriod) ->
+                  test.ok userPeriod
+                  test.equal userPeriod.period, null
+                  userPeriod.fetchPeriod
+                    error: logErrorResponse "userPeriod.fetchPeriod"
+                    success: (period2) ->
+                      test.ok period2
+                      test.equal period2.id, period.id
+                      test.equal userPeriod.period.id, period.id
+                      userPeriod.destroy
+                        success: -> user.destroy
+                          success: -> period.destroy
+                            success: -> league.destroy
+                              success: ->
+                                test.done()
 
 exports.testFetchGames = (test) -> 
-  test.ok false, "implement testFetchGames"
-  test.done()
+  league = new League
+    statsKey: "21oxy8iluhdkjashk"
+    basePeriodCategory: "daiy"
+  league.save league.toJSON(),
+    success: ->
+      period = new Period
+        leagueId: league.id
+        category: league.get "basePeriodCategory"
+        startDate: new Date("Mar 21, 2012")
+        endDate: new Date("Mar 22, 2012")
+      period.save period.toJSON(),
+        success: ->
+          user = new User
+          user.save user.toJSON(),
+            success: ->
+              params = 
+                userId: user.id
+                periodId: period.id
+              UserPeriod.createForUserAndPeriod params,
+                error: logErrorResponse "UserPeriod.createForUserAndPeriod"
+                success: (userPeriod) ->
+                  test.ok userPeriod
+                  test.equal userPeriod.games, null
+
+                  g1 = new Game
+                    leagueId: league.id
+                    startDate: (new Date(period.get("startDate"))).addHours(1)
+                    statsKey: "872roqfgjhbs7uiljks"
+                  g1.save g1.toJSON(),
+                    error: logErrorResponse "g1.save"
+                    success: (game1,response) ->
+                      test.ok game1
+                      test.ok game1.id
+                      userPeriod.games = null
+                      userPeriod.fetchGames
+                        error: logErrorResponse "userPeriod.fetchGames"
+                        success: (games,response) ->
+                          test.equal games.length,1
+                          test.equal games[0].id, game1.id
+                          g2 = new Game
+                            leagueId: league.id
+                            startDate: (new Date(period.get("startDate"))).addHours(100)
+                            statsKey: "7uihqlwfjslsalkjas"
+                          g2.save g2.toJSON(),
+                            error: logErrorResponse "g2.save"
+                            success: (game2,response) ->
+                              test.ok game2
+                              userPeriod.games = null
+                              userPeriod.fetchGames
+                                error: logErrorResponse "userPeriod.fetchGames 2"
+                                success: (games,response) ->
+                                  test.equal games.length,1,"should be 1 game only"
+                                  test.equal games[0].id,game1.id,"should be 1st game"
+                                  game2.destroy
+                                    error: logErrorResponse "game2.destroy"
+                                    success: ->
+                                      game1.destroy
+                                        error: logErrorResponse "game1.destroy"
+                                        success: ->
+                                          userPeriod.destroy
+                                            success: -> user.destroy
+                                              success: -> period.destroy
+                                                success: -> league.destroy
+                                                  success: ->
+                                                    test.done()
