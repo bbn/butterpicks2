@@ -77,6 +77,35 @@ exports.testGetDailyPeriod =
       test.done()
 
 
+exports.testGetOrCreateBasePeriodForGame = (test) ->
+  league = new League
+    statsKey: "27eqiugwdasb"
+    basePeriodCategory: "daily"
+  league.save league.toJSON(),
+    error: logErrorResponse "league.save"
+    success: (model,response) ->
+      game = new Game
+        leagueId: league.id
+        startDate: new Date(2011,0,1,13,30)
+        statsKey: "o7gfhbdjfso87qrgaf"
+      game.save game.toJSON(),
+        error: logErrorResponse "game.save"
+        success: (game) ->
+          Period.getOrCreateBasePeriodForGame game,
+            error: logErrorResponse "Period.getOrCreateBasePeriodForGame"
+            success: (period) ->
+              test.ok period
+              test.ok period.id
+              test.equal period.get("leagueId"), game.get("leagueId")
+              test.equal period.get("startDate").toJSON(), (new Date(2011,0,1)).toJSON()
+              period.destroy
+                success: -> game.destroy
+                  success: -> league.destroy
+                    success: -> test.done()
+
+
+
+
 exports.testFetchAssociatedModels = 
 
   setUp: (callback) ->

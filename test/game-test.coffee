@@ -15,6 +15,7 @@ Backbone.sync = bbCouch.sync
 models = require "../lib/models"
 Game = models.Game
 League = models.League
+Period = models.Period
 
 workers = require "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
@@ -177,23 +178,27 @@ exports.testGamePost =
       test.equal gameData.pickCount.away,0
       test.equal gameData.pickCount.draw,0
       test.ok gameData.id
-      PeriodUpdateJob.getNext
-        limit: 2
-        error: logErrorResponse
-        success: (jobs,_) =>
-          test.ok jobs
-          test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
-          test.equal jobs[0].get("leagueId"),@league.id
-          test.ok jobs[0].id
-          jobs[0].destroy
+      Game.fetchByStatsKey 
+        statsKey: data.statsKey
+        error: logErrorResponse "Game.fetchByStatsKey"
+        success: (game) =>
+          test.ok game
+          test.equal game.get("leagueId"), @league.id
+          test.equal game.get("statsKey"), data.statsKey
+          test.equal game.get("doctype"), "Game"
+          PeriodUpdateJob.getNext
+            limit: 2
             error: logErrorResponse
-            success: ->
-              g = new Game({_id:gameData.id})
-              g.fetch
+            success: (jobs,_) =>
+              test.ok jobs
+              test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
+              test.equal jobs[0].get("gameId"),game.id
+              test.ok jobs[0].id
+              jobs[0].destroy
                 error: logErrorResponse
-                success: (model,response) ->
-                  model.destroy
-                    error: logErrorResponse
+                success: =>
+                  game.destroy
+                    error: logErrorResponse "game.destroy"
                     success: -> test.done()
 
 
@@ -236,21 +241,28 @@ exports.testGamePostUpdate =
         g = new Game(@gameData)
         g.save g.toJSON(),
           error: logErrorResponse
-          success: (model,response) =>
-            @model = model
-            callback()
+          success: (g,response) =>
+            @game = g
+            Period.getOrCreateBasePeriodForGame g,
+              error: logErrorResponse
+              success: (period) =>
+                @period = period
+                callback()
 
   tearDown: (callback) ->
-    return callback() unless @model
-    @model.fetch
+    return callback() unless @game
+    @game.fetch
       error: logErrorResponse
       success: =>
-        @model.destroy
+        @game.destroy
           error: logErrorResponse
           success: => 
-            @league.destroy
+            @period.destroy
               error: logErrorResponse
-              success: -> callback()
+              success: =>
+                @league.destroy
+                  error: logErrorResponse
+                  success: -> callback()
 
   testGamePostUpdate: (test) ->
     data = 
@@ -303,7 +315,7 @@ exports.testGamePostUpdate =
         success: (jobs,_) =>
           test.ok jobs
           test.equal jobs.length, 1, "should create 1 PeriodUpdateJob"
-          test.equal jobs[0].get("leagueId"),@league.id
+          test.equal jobs[0].get("gameId"),@game.id
           test.ok jobs[0].id
           jobs[0].destroy
             error: logErrorResponse
@@ -361,6 +373,8 @@ exports.testGamePostUpdate =
         success: (jobs,_) =>
           test.ok jobs
           test.equal jobs.length, 2, "should create 2 PeriodUpdateJobs"
+          test.equal jobs[0].get("gameId"), @game.id
+          test.equal jobs[1].get("periodId"), @period.id
           jobs[0].destroy
             success: -> jobs[1].destroy
               success: ->

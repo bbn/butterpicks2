@@ -116,41 +116,26 @@ Game.createOrUpdateGameFromStatsAttributes = (params,options) ->
           game.save attributes,
             error: options.error
             success: (game) ->
-              game.fetchBasePeriodId
+              PeriodUpdateJob.create {gameId:game.id},
                 error: options.error
-                success: (newBasePeriodId) =>
-                  periodUpdateJobParams =
-                    periodId: newBasePeriodId
-                    leagueId: league.id
-                    category: league.get "basePeriodCategory"
-                    withinDate: game.get "startDate"
-                  PeriodUpdateJob.create periodUpdateJobParams,
-                    error: options.error
-                    success: -> options.success game
+                success: -> options.success game
         success: (game,response) ->
           game.fetchBasePeriodId
             error: options.error
-            success: (basePeriodId) ->
-              oldBasePeriodId = basePeriodId
+            success: (oldBasePeriodId) ->
               game.save attributes, 
                 error: options.error
                 success: (game) ->
-                  game.fetchBasePeriodId
+                  PeriodUpdateJob.create {gameId:game.id},
                     error: options.error
-                    success: (newBasePeriodId) ->
-                      periodUpdateJobParams =
-                        periodId: newBasePeriodId
-                        leagueId: league.id
-                        category: league.basePeriodCategory
-                        withinDate: game.get "startDate"
-                      PeriodUpdateJob.create periodUpdateJobParams,
+                    success: ->
+                      game.fetchBasePeriodId
                         error: options.error
-                        success: ->
-                          unless oldBasePeriodId and oldBasePeriodId != newBasePeriodId
-                            return options.success game
-                          PeriodUpdateJob.create {periodId: oldBasePeriodId},
+                        success: (newBasePeriodId) ->
+                          return options.success(game) if newBasePeriodId==oldBasePeriodId
+                          PeriodUpdateJob.create {periodId:oldBasePeriodId},
                             error: options.error
-                            success: -> options.success game 
+                            success: -> options.success(game) 
 
 
 Game.attrFromStatServerParams = (params) ->
@@ -202,7 +187,6 @@ Pick.fetchForUserAndGame = (params,options) ->
 
 
 
-console.log "TODO test Period.getOrCreateBasePeriodForGame"
 Period.getOrCreateBasePeriodForGame = (game,options) ->
   game.fetchBasePeriodId
     error: options.error
@@ -211,25 +195,21 @@ Period.getOrCreateBasePeriodForGame = (game,options) ->
       p.fetch
         success: options.success
         error: (p,response) -> 
-          console.log "FIXME confirm that error comes from absent model: #{util.inspect response}"
-          league = new League { _id:game.get("leagueId")}
-          league.fetch
-            error: options.error
-            success: (league,response) ->
-              gameDate = game.get "startDate"
-              switch league.get("basePeriodCategory") 
-                when "daily"
-                  startDate = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate())
-                  endDate = (new Date(startDate)).add {days:1} 
-                when "weekly"
-                  console.log "FIXME no code in place for weekly categories"
-                  console.log "FIXME adjust endDate depending on category of period"
-              data =
-                leagueId: game.get("leagueId")
-                category: league.get("basePeriodCategory") 
-                startDate: startDate
-                endDate: endDate
-              p.save data,options
+          return options.error(response) unless response.status_code == 404
+          gameDate = game.get "startDate"
+          switch game.league.get("basePeriodCategory") 
+            when "daily"
+              startDate = new Date(gameDate.getFullYear(), gameDate.getMonth(), gameDate.getDate())
+              endDate = (new Date(startDate)).add {days:1} 
+            when "weekly"
+              console.log "FIXME no code in place for weekly categories"
+              console.log "FIXME adjust endDate depending on category of period"
+          data =
+            leagueId: game.get("leagueId")
+            category: game.league.get("basePeriodCategory") 
+            startDate: startDate
+            endDate: endDate
+          p.save data,options
 
 
 Period::fetchGames = (options) ->

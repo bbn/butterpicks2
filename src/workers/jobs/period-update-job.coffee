@@ -19,9 +19,11 @@ module.exports = class PeriodUpdateJob extends Job
     doctype: "PeriodUpdateJob"
     createdDate: new Date()
     periodId: null
-    leagueId: null
-    category: null
-    withinDate: null
+    gameId: null
+
+    # leagueId: null
+    # category: null
+    # withinDate: null
 
   work: (options) ->
     @fetchOrCreatePeriod
@@ -83,26 +85,14 @@ module.exports = class PeriodUpdateJob extends Job
 
 
   fetchOrCreatePeriod: (options) ->
-    period = new Period {id:@get("periodId")}
-    period.fetch
-      success: options.success
-      error: (model,response) =>
-        console.log "FIXME: confirm it's missing and not a real error: #{util.inspect response}"
-        console.log "FIXME: generalize for non-daily periods"
-        withinDate = @get "withinDate"
-        leagueId = @get "leagueId"
-        category = @get "category"
-        return options.error(model,response) unless withinDate and leagueId and category
-        startDate = withinDate.clearTime()
-        endDate = (new Date(startDate)).addDays 1
-        period.set
-          leagueId: leagueId
-          category: category
-          startDate: startDate
-          endDate: endDate
-        period.save period.toJSON(),
-          error: (model,response) =>
-            options.error model,response
-          success: (model,response) =>
-            options.success model,response
+    return @fetchPeriod(options) if @get("periodId")
+    game = new Game { _id: @get("gameId") }
+    game.fetch
+      error: options.error
+      success: (game) =>
+        Period.getOrCreateBasePeriodForGame game, options
 
+
+  fetchPeriod: (options) ->
+    period = new Period {_id:@get("periodId")}
+    period.fetch options
