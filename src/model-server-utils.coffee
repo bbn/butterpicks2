@@ -38,11 +38,7 @@ League.fetchOrCreateForStatsKey = (statsKey,options) ->
 console.log "TODO test League.fetchById"
 League.fetchById = (options) ->
   league = new League { _id:options.id }
-  league.fetch
-    error: options.error
-    success: (league) ->
-      options.success league
-
+  league.fetch options
 
 User::getButters = (options) ->
   viewParams =

@@ -60,7 +60,34 @@ task 'freshtest', 'Run tests, wiping test db first', (options) ->
   nano.db.destroy "picks-testing", (err,body) ->
     nano.db.create "picks-testing", ->
       updateDesignDocuments {update:true,silent:true}, (err,_) ->
-        invoke "test"
+        invoke "jscoverage"
+
+
+task 'jscoverage', 'Create js-coverage versions of lib files', (options) ->
+  d = spawn "rm", ["-rf","lib-cov"]
+  d.stderr.on "data", (data) ->
+    process.stderr.write data.toString()
+  d.stdout.on 'data', (data) ->
+    print data
+  d.on 'exit', (code) ->
+    cov = spawn "jscoverage", ["lib","lib-cov"]
+    cov.stderr.on 'data', (data) ->
+      process.stderr.write data.toString()
+    cov.stdout.on 'data', (data) ->
+      print data
+    cov.on 'exit', (code) ->
+      print "\n+++ lib-cov updated.\n\n"
+      invoke "jsmeter"
+
+task "jsmeter", "generate code metrics using jsmeter", (options) ->
+  x = spawn "./node_modules/node-jsmeter/bin/jsmeter.js", ["-o","./covershot/jsmeter/","./lib/"]
+  x.stderr.on 'data', (data) ->
+    process.stderr.write data.toString()
+  x.stdout.on 'data', (data) ->
+    print data
+  x.on 'exit', (code) ->
+    print "\n+++ code metrics updated.\n\n"
+    invoke "test"
 
 option '-tf', '--testfile [FILE]', 'test file to run'
 
@@ -75,7 +102,25 @@ task 'test', 'Run tests', (options) ->
   tests.stdout.on 'data', (data) ->
     print data
   tests.on 'exit', (code) ->
-    print "\n+++ Tests finished. Code: #{code}\n\n"    
+    print "\n+++ Tests finished. Code: #{code}\n\n"
+    invoke "coverage-report"
+
+
+task 'coverage-report', "Generate a coverage report", (options) ->
+  x = spawn "./node_modules/covershot/bin/covershot", ["covershot/data","-f","html","-f","clover","-f","json"]
+  x.stderr.on 'data', (data) ->
+    process.stderr.write data.toString()
+  x.stdout.on 'data', (data) ->
+    print data
+  x.on 'exit', (code) ->
+    print "\n+++ coverage report generated.\n"
+    print "To view: open covershot/index.html\n\n"
+
+
+
+  
+
+   
   
 
 # compare and optionally update design documents

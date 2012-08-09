@@ -26,7 +26,7 @@ module.exports = class Prize extends Backbone.Model
     for condition in conditions
       return "no metric for condition #{condition}" unless condition.metric
       return "no operator for condition #{condition}" unless condition.operator
-      return "no value for condition #{condition}" if (condition.value==undefined)
+      return "no value for condition #{condition}" unless condition.value or condition.value==0
       return "invalid operator for condition #{condition}" if (_(validOperators).indexOf(condition.operator)==-1)
     return "no pointValue" if attr.pointValue==null
     return "no name" unless attr.name
@@ -36,7 +36,7 @@ module.exports = class Prize extends Backbone.Model
     return true unless conditions
     return false unless metrics
     for condition in conditions
-      return false if (metrics[condition.metric] == undefined)
+      return false unless metrics[condition.metric] or metrics[condition.metric]==0
       switch condition.operator
         when '>'
           return false unless metrics[condition.metric] > condition.value

@@ -1,18 +1,20 @@
+csrequire = require('covershot').require.bind(null, require)
+
 util = require "util"
 
-couch = require "../lib/couch"
+couch = csrequire "../lib/couch"
 Backbone = require "backbone"
-bbCouch = require "../lib/backbone-couch"
+bbCouch = csrequire "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
-models = require "../lib/models"
-require "../lib/model-server-utils"
+models = csrequire "../lib/models"
+csrequire "../lib/model-server-utils"
 Period = models.Period
 League = models.League
 Game = models.Game
 User = models.User
 UserPeriod = models.UserPeriod
 
-workers = require "../lib/workers"
+workers = csrequire "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
 UserPeriodUpdateJob = workers.UserPeriodUpdateJob
 

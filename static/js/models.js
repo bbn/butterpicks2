@@ -3329,7 +3329,7 @@ require.define("/models/pick.js", function (require, module, exports, __dirname,
       a = [];
       if (!this.get("home")) a.push(this.homeValue());
       if (!this.get("away")) a.push(this.awayValue());
-      if (!this.get("draw") ? this.couldDraw() : void 0) a.push(this.drawValue());
+      if (this.couldDraw()) if (!this.get("draw")) a.push(this.drawValue());
       return a;
     };
 
@@ -3467,7 +3467,7 @@ require.define("/models/prize.js", function (require, module, exports, __dirname
         condition = conditions[_i];
         if (!condition.metric) return "no metric for condition " + condition;
         if (!condition.operator) return "no operator for condition " + condition;
-        if (condition.value === void 0) {
+        if (!(condition.value || condition.value === 0)) {
           return "no value for condition " + condition;
         }
         if (_(validOperators).indexOf(condition.operator) === -1) {
@@ -3484,7 +3484,9 @@ require.define("/models/prize.js", function (require, module, exports, __dirname
       if (!metrics) return false;
       for (_i = 0, _len = conditions.length; _i < _len; _i++) {
         condition = conditions[_i];
-        if (metrics[condition.metric] === void 0) return false;
+        if (!(metrics[condition.metric] || metrics[condition.metric] === 0)) {
+          return false;
+        }
         switch (condition.operator) {
           case '>':
             if (!(metrics[condition.metric] > condition.value)) return false;

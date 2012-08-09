@@ -1,6 +1,8 @@
+csrequire = require('covershot').require.bind(null, require)
+
 util = require "util"
 Backbone = require "backbone"
-bbCouch = require "../lib/backbone-couch"
+bbCouch = csrequire "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
 
 logErrorResponse = (model,response) ->

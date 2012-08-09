@@ -1,2 +1,4 @@
 node_modules
+lib-cov
+covershot
 .DS_Store

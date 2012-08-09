@@ -6,8 +6,10 @@
     "npm":  "1.x.x"
   },
   "dependencies": {
+    "covershot" : "latest",
     "request" : "latest",
     "nodeunit" : "latest",
+    "node-jsmeter" : "latest",
     "node-static": "latest",
     "nano": "latest",
     "journey": "latest",

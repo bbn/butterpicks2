@@ -107,7 +107,8 @@ module.exports = class Pick extends Backbone.Model
     a = []
     a.push(@homeValue()) unless @get "home"
     a.push(@awayValue()) unless @get "away"
-    a.push(@drawValue()) if @couldDraw() unless @get "draw"
+    if @couldDraw()
+      a.push(@drawValue()) unless @get "draw"
     a
 
   valuePicked: ->

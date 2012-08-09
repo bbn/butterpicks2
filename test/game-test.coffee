@@ -1,27 +1,29 @@
+csrequire = require('covershot').require.bind(null, require)
+
 util = require "util"
 require "../lib/date"
 
 journey = require "journey"
-controllers = require "../lib/controllers"
+controllers = csrequire "../lib/controllers"
 mockRequest = require "../node_modules/journey/lib/journey/mock-request"
 mock = mockRequest.mock controllers.router
 journey.env = "test"
 
-couch = require "../lib/couch"
+couch = csrequire "../lib/couch"
 
 Backbone = require "backbone"
-bbCouch = require "../lib/backbone-couch"
+bbCouch = csrequire "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
-models = require "../lib/models"
+models = csrequire "../lib/models"
 Game = models.Game
 League = models.League
 Period = models.Period
 
-workers = require "../lib/workers"
+workers = csrequire "../lib/workers"
 PeriodUpdateJob = workers.PeriodUpdateJob
 PeriodUpdateJob.workSuspended = true
 
-gameUpdater = require "../lib/game-updater"
+gameUpdater = csrequire "../lib/game-updater"
 
 
 logErrorResponse = (message) ->

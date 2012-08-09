@@ -1,14 +1,16 @@
+csrequire = require('covershot').require.bind(null, require)
+
 util = require "util"
 journey = require "journey"
-controllers = require "../lib/controllers"
+controllers = csrequire "../lib/controllers"
 mockRequest = require "../node_modules/journey/lib/journey/mock-request"
 mock = mockRequest.mock controllers.router
 journey.env = "test"
 
 Backbone = require "backbone"
-bbCouch = require "../lib/backbone-couch"
+bbCouch = csrequire "../lib/backbone-couch"
 Backbone.sync = bbCouch.sync
-models = require "../lib/models"
+models = csrequire "../lib/models"
 User = models.User
 ButterTransaction = models.ButterTransaction
 
