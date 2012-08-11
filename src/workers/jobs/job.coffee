@@ -35,12 +35,10 @@ module.exports = class Job extends Backbone.Model
   @workInProgress: false
 
   @startWorking: ->
-    console.log "@startWorking"
     @doWork() unless @workInProgress
 
     
   @doWork: ->
-    console.log "@doWork"
     @workInProgress = true
     @getNext
       error: (model,response) => 
@@ -57,7 +55,7 @@ module.exports = class Job extends Backbone.Model
               error: => 
                 console.log "!!! deleting job error: #{util.inspect response}"
                 @doWork()
-              success: => @doWork()
+              success: => @doWork() unless @workSuspended
 
   @stopWorking: ->
     console.log "@stopWorking"

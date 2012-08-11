@@ -36,6 +36,7 @@ updateGames = (options) ->
       integerDate = if lastUpdatedGameDate then parseInt(lastUpdatedGameDate.valueOf()/1000) else 0
       statsUrl = "http://butterstats.appspot.com/api/getgamesrecentlyupdated?since=#{integerDate}"
       console.log "+++ fetching #{statsUrl}"
+      console.log "    all games updated since #{lastUpdatedGameDate}"
       requestParams = 
         uri: statsUrl
         json: true
@@ -43,6 +44,7 @@ updateGames = (options) ->
         return console.log("!! error get api/getgamesrecentlyupdated: #{util.inspect error}") if error
         count = body.length
         console.log "+++ #{count} games to update."
+        return poll() if count==0
         for gameData in body
           gameData.statsKey = gameData.key
           Game.createOrUpdateGameFromStatsAttributes gameData,

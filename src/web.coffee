@@ -7,6 +7,8 @@ Backbone = require "backbone"
 bbCouch = require "./backbone-couch"
 Backbone.sync = bbCouch.sync
 models = require "./models"
+workers = require "./workers"
+
 
 controllers = require "./controllers"
     
@@ -36,4 +38,7 @@ server.listen port
 console.log "listening on #{port}"
 
 gameUpdater = require "./game-updater"
-gameUpdater.poll 1000
+gameUpdater.poll 10000
+
+workers.PeriodUpdateJob.doWork()
+workers.UserPeriodUpdateJob.doWork()
